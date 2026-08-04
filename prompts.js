@@ -139,3 +139,111 @@ ${claim.text}
 ${JSON.stringify(compactClaims, null, 2)}`;
   }
 };
+
+// One-click handoff: copy the current prompt and open a fresh ChatGPT tab.
+(() => {
+  'use strict';
+  const KEY = 'fact-workbench-state-v1';
+  const $ = (selector) => document.querySelector(selector);
+
+  function readState() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || {}; }
+    catch { return {}; }
+  }
+
+  function showToast(message) {
+    const toast = $('#toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove('show'), 1900);
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.append(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+    }
+  }
+
+  async function openChatGPTWithPrompt(text) {
+    if (!text || !text.trim()) {
+      showToast('먼저 원문이나 검증할 주장을 입력하세요.');
+      return;
+    }
+    const tab = window.open('https://chatgpt.com/', '_blank');
+    if (tab) tab.opener = null;
+    await copyText(text);
+    showToast(tab
+      ? '프롬프트를 복사했습니다. 새 채팅에 붙여넣으세요.'
+      : '프롬프트는 복사됐습니다. 팝업 차단을 해제하세요.');
+  }
+
+  function projectContext() {
+    return `프로젝트: ${$('#projectTitle')?.value || '제목 없음'}\n원문 전체 맥락:\n${$('#sourceText')?.value || '원문 없음'}`;
+  }
+
+  function currentClaim(state) {
+    const activeId = $('.claim-item.active .claim-id')?.textContent || state.selectedClaimId;
+    return (state.claims || []).find((claim) => claim.id === activeId) || null;
+  }
+
+  function bindOneClickAI() {
+    const extractButton = $('#copyExtractPromptBtn');
+    const extractAgainButton = $('#copyExtractPromptBtn2');
+    const factButton = $('#copyFactPromptBtn');
+    const contextButton = $('#copyContextPromptBtn');
+    const synthesisButton = $('#copySynthesisPromptBtn');
+    const resultButton = $('.step-panel[data-panel="1"] .next-step[data-next="2"]');
+
+    if (extractButton) {
+      extractButton.textContent = '프롬프트 복사하고 AI 새 채팅 열기';
+      extractButton.onclick = () => openChatGPTWithPrompt(window.FACT_PROMPTS.extraction($('#sourceText')?.value || ''));
+    }
+    if (extractAgainButton) {
+      extractAgainButton.textContent = '프롬프트 다시 복사하고 AI 열기';
+      extractAgainButton.onclick = () => openChatGPTWithPrompt(window.FACT_PROMPTS.extraction($('#sourceText')?.value || ''));
+    }
+    if (resultButton) resultButton.textContent = 'AI 결과 붙여넣기';
+
+    if (factButton) {
+      factButton.textContent = '1차 프롬프트 복사하고 AI 새 채팅 열기';
+      factButton.onclick = () => {
+        const claim = currentClaim(readState());
+        if (claim) openChatGPTWithPrompt(window.FACT_PROMPTS.factCheck(claim, projectContext()));
+      };
+    }
+    if (contextButton) {
+      contextButton.textContent = '2차 프롬프트 복사하고 AI 새 채팅 열기';
+      contextButton.onclick = () => {
+        const claim = currentClaim(readState());
+        if (claim) openChatGPTWithPrompt(window.FACT_PROMPTS.contextReview(claim, projectContext()));
+      };
+    }
+    if (synthesisButton) {
+      synthesisButton.textContent = '종합 프롬프트 복사하고 AI 열기';
+      synthesisButton.onclick = () => openChatGPTWithPrompt(window.FACT_PROMPTS.synthesis(readState()));
+    }
+
+    if (!$('.workflow-guide')) {
+      const notice = $('.step-panel[data-panel="1"] .notice');
+      if (notice) {
+        const guide = document.createElement('div');
+        guide.className = 'workflow-guide';
+        guide.innerHTML = '<strong>처음 쓰는 순서</strong><ol><li>원문을 붙여넣습니다.</li><li><b>프롬프트 복사하고 AI 새 채팅 열기</b>를 누릅니다.</li><li>새 채팅에 붙여넣기(Ctrl+V)하고 전송합니다.</li><li>AI의 JSON 결과를 2단계에 붙여넣습니다.</li></ol>';
+        notice.before(guide);
+      }
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => setTimeout(bindOneClickAI, 0));
+})();
