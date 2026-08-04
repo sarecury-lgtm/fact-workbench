@@ -3,15 +3,152 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="댓글 속 근거를 사건 묶음별로 검증하는 간단한 팩트체크 작업대" />
+  <meta name="description" content="원문 한 번으로 주장 추출, 사실 검증, 원문 비교와 활용문 생성을 돕는 팩트체크 작업대" />
   <title>Fact Workbench</title>
-  <link rel="stylesheet" href="styles.css" />
+  <style>
+:root {
+  color-scheme: light;
+  --bg: #f4f5f7;
+  --card: #fff;
+  --text: #17191d;
+  --muted: #68707d;
+  --line: #dce0e6;
+  --blue: #245cff;
+  --blue-soft: #eef3ff;
+  --green: #147a4b;
+  --green-soft: #e9f7f0;
+  --amber: #966000;
+  --amber-soft: #fff5dc;
+  --red: #b42318;
+  --red-soft: #fff0ee;
+  --gray-soft: #f0f2f5;
+  font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+button, input, textarea { font: inherit; }
+button { cursor: pointer; }
+.topbar { min-height: 78px; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #fff; border-bottom: 1px solid var(--line); }
+.topbar h1 { margin: 0; font-size: 21px; }
+.topbar p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.top-actions { display: flex; align-items: center; gap: 8px; }
+#saveStatus { width: 58px; color: var(--muted); font-size: 12px; text-align: center; }
+.steps { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1060px; margin: 22px auto 0; padding: 0 20px; }
+.steps button { min-height: 58px; border: 1px solid var(--line); background: #fff; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 9px; }
+.steps button:first-child { border-radius: 10px 0 0 10px; }
+.steps button:last-child { border-radius: 0 10px 10px 0; }
+.steps button.active { color: var(--blue); border-color: var(--blue); background: var(--blue-soft); font-weight: 700; }
+.steps b { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--gray-soft); font-size: 12px; }
+.steps button.active b { background: var(--blue); color: #fff; }
+main { max-width: 1060px; margin: 16px auto 60px; padding: 0 20px; }
+.panel { display: none; background: var(--card); border: 1px solid var(--line); border-radius: 15px; padding: 26px; box-shadow: 0 8px 28px rgba(20, 28, 45, .05); }
+.panel.active { display: block; }
+.panel-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; }
+.panel-title h2 { margin: 4px 0 7px; font-size: 23px; }
+.panel-title p { margin: 0; color: var(--muted); line-height: 1.55; }
+.eyebrow { color: var(--blue); font-size: 12px; font-weight: 800; }
+.field { display: grid; gap: 8px; margin: 16px 0; }
+.field span { font-size: 13px; font-weight: 700; }
+.field small { color: var(--muted); font-weight: 400; }
+input, textarea { width: 100%; border: 1px solid #cfd5de; border-radius: 10px; padding: 12px 13px; background: #fff; color: var(--text); line-height: 1.55; }
+textarea { resize: vertical; }
+input:focus, textarea:focus { outline: 3px solid rgba(36,92,255,.12); border-color: var(--blue); }
+.button { border: 1px solid transparent; border-radius: 10px; padding: 10px 14px; font-weight: 750; }
+.button.primary { background: var(--blue); color: #fff; }
+.button.quiet { background: #fff; border-color: #ccd3de; color: #222; }
+.button.danger { color: var(--red); }
+.file-label { cursor: pointer; }
+.handoff, .return-box, .deep-check, .data-export { border: 1px solid var(--line); border-radius: 13px; padding: 18px; margin: 18px 0; }
+.handoff { background: #f8faff; display: flex; align-items: center; gap: 16px; }
+.handoff p { margin: 0; color: var(--muted); font-size: 13px; }
+.return-box { background: #fafbfc; }
+.return-box h3, .deep-check h3, .data-export h3 { margin: 4px 0 6px; }
+.return-box p, .deep-check p, .data-export p { margin: 0; color: var(--muted); line-height: 1.5; }
+.row-actions, .bottom-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.bottom-actions { justify-content: flex-end; margin-top: 22px; }
+.hint { font-size: 13px; color: var(--muted); }
+.hint.error { color: var(--red); }
+.hint.success { color: var(--green); }
+.progress-pill { background: var(--gray-soft); border-radius: 999px; padding: 8px 12px; font-weight: 750; white-space: nowrap; }
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0; }
+.summary-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #fff; }
+.summary-card strong { display: block; font-size: 24px; margin-bottom: 4px; }
+.summary-card span { color: var(--muted); font-size: 12px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.filter { border: 1px solid var(--line); border-radius: 999px; padding: 8px 11px; background: #fff; color: #4d5562; }
+.filter.active { border-color: var(--blue); color: var(--blue); background: var(--blue-soft); font-weight: 700; }
+.claim-list { display: grid; gap: 10px; }
+.claim-row { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+.claim-main { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 15px; }
+.claim-main input { width: auto; margin-top: 5px; }
+.claim-main h4 { margin: 0 0 6px; font-size: 15px; line-height: 1.45; }
+.claim-meta { display: flex; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+.verdict-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 6px 9px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.verdict-accurate { background: var(--green-soft); color: var(--green); }
+.verdict-partial { background: var(--amber-soft); color: var(--amber); }
+.verdict-wrong { background: var(--red-soft); color: var(--red); }
+.verdict-unknown { background: var(--gray-soft); color: #5c6470; }
+.claim-toggle { grid-column: 2 / 4; border: 0; background: transparent; color: var(--blue); text-align: left; padding: 0; font-size: 12px; }
+.claim-detail { display: none; padding: 0 15px 16px 53px; }
+.claim-row.open .claim-detail { display: block; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.detail-box { background: #f7f8fa; border-radius: 9px; padding: 12px; }
+.detail-box b { display: block; margin-bottom: 5px; font-size: 12px; color: #4e5663; }
+.detail-box p { margin: 0; white-space: pre-wrap; line-height: 1.55; font-size: 13px; }
+.sources { margin: 10px 0 0; padding-left: 20px; }
+.sources li { margin: 7px 0; line-height: 1.45; font-size: 13px; }
+.sources a { color: var(--blue); word-break: break-all; }
+.deep-check { background: #fffaf0; border-color: #edcd85; }
+.deep-head { display: flex; justify-content: space-between; gap: 15px; align-items: flex-start; }
+.deep-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.deep-count { background: #eef1f5; border-radius: 999px; padding: 8px 11px; font-size: 12px; font-weight: 750; }
+.hidden { display: none !important; }
+.use-tabs { display: flex; flex-wrap: wrap; gap: 7px; margin: 16px 0; }
+.use-tab { border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 9px 11px; }
+.use-tab.active { border-color: var(--blue); color: var(--blue); background: var(--blue-soft); font-weight: 700; }
+.use-output-wrap textarea { min-height: 380px; }
+.overall-report { border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 20px; line-height: 1.65; white-space: pre-wrap; }
+.overall-report.empty { color: var(--muted); }
+.data-export { margin-top: 22px; background: #f8faff; border-color: #cfdcff; }
+.data-export-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.export-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 15px; }
+.export-option { text-align: left; border: 1px solid #ccd5e8; border-radius: 11px; background: #fff; padding: 14px; color: var(--text); }
+.export-option:hover { border-color: var(--blue); box-shadow: 0 3px 12px rgba(36,92,255,.09); }
+.export-option strong { display: block; margin-bottom: 5px; font-size: 14px; }
+.export-option span { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.export-note { display: block; margin-top: 12px; color: var(--muted); line-height: 1.5; }
+.empty { color: var(--muted); text-align: center; padding: 30px; }
+dialog { width: min(850px, calc(100vw - 30px)); max-height: 86vh; border: 0; border-radius: 14px; padding: 0; box-shadow: 0 24px 80px rgba(0,0,0,.23); }
+dialog::backdrop { background: rgba(18,22,30,.5); }
+.dialog-head { display: flex; justify-content: space-between; gap: 15px; align-items: flex-start; padding: 20px 22px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 1; }
+.dialog-head h2 { margin: 8px 0 0; font-size: 20px; }
+.icon-button { width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--line); background: #fff; font-size: 22px; }
+#claimDialogBody { padding: 20px 22px 26px; line-height: 1.6; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 15px); opacity: 0; pointer-events: none; background: #20242b; color: #fff; padding: 10px 14px; border-radius: 9px; font-size: 13px; transition: .18s; z-index: 20; max-width: calc(100vw - 32px); }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (max-width: 760px) {
+  .topbar { align-items: flex-start; padding: 15px; }
+  .top-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .steps { padding: 0 10px; }
+  .steps span { display: none; }
+  main { padding: 0 10px; }
+  .panel { padding: 18px; }
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-grid { grid-template-columns: 1fr; }
+  .claim-main { grid-template-columns: 25px minmax(0,1fr); }
+  .claim-main > .verdict-badge { grid-column: 2; justify-self: start; }
+  .claim-toggle { grid-column: 2; }
+  .claim-detail { padding-left: 52px; }
+  .handoff { align-items: flex-start; flex-direction: column; }
+  .export-grid { grid-template-columns: 1fr; }
+}
+  </style>
 </head>
 <body>
   <header class="topbar">
     <div>
       <h1>Fact Workbench</h1>
-      <p>원문 한 번, 사건 묶음별 검증, 마지막 전체 검토.</p>
+      <p>원문 한 번, 전체 사실 검증 한 번, 필요한 항목만 다시 확인합니다.</p>
     </div>
     <div class="top-actions">
       <span id="saveStatus">자동 저장</span>
@@ -22,9 +159,9 @@
   </header>
 
   <nav class="steps" aria-label="작업 단계">
-    <button data-step="1" type="button"><b>1</b><span>원문과 주장 추출</span></button>
-    <button data-step="2" type="button"><b>2</b><span>사건 묶음 검증</span></button>
-    <button data-step="3" type="button"><b>3</b><span>전체 맥락 검토</span></button>
+    <button data-step="1" type="button"><b>1</b><span>원문 전체 검증</span></button>
+    <button data-step="2" type="button"><b>2</b><span>결과 확인·재검증</span></button>
+    <button data-step="3" type="button"><b>3</b><span>결과 활용</span></button>
   </nav>
 
   <main>
@@ -32,116 +169,793 @@
       <div class="panel-title">
         <div>
           <span class="eyebrow">1단계</span>
-          <h2>원문에서 검증할 근거를 뽑습니다</h2>
-          <p>원문은 딱 한 번만 AI에 보냅니다. AI가 주장들을 같은 사건끼리 묶어서 돌려줍니다.</p>
+          <h2>원문을 한 번 보내 전체를 검증합니다</h2>
+          <p>주장 추출, 웹 검색, 원문과 실제 자료의 비교, 전체 결론 검토까지 한 작업문에 넣습니다.</p>
         </div>
       </div>
-
-      <label class="field compact">
-        <span>작업 이름 <small>선택</small></span>
-        <input id="projectTitle" type="text" placeholder="예: 유토피아 댓글 근거 검증" />
-      </label>
-      <label class="field">
-        <span>원문</span>
-        <textarea id="sourceText" rows="16" placeholder="댓글 전체를 그대로 붙여넣으세요."></textarea>
-      </label>
+      <label class="field compact"><span>작업 이름 <small>선택</small></span><input id="projectTitle" type="text" placeholder="예: 유토피아 댓글 검증" /></label>
+      <label class="field"><span>원문</span><textarea id="sourceText" rows="17" placeholder="검증할 댓글이나 글 전체를 그대로 붙여넣으세요."></textarea></label>
 
       <div class="handoff">
-        <button id="sendExtractionBtn" class="button primary" type="button">원문 분석을 AI에 맡기기</button>
-        <p>프롬프트가 복사되고 ChatGPT 새 채팅이 열립니다. 새 채팅에서 <b>Ctrl+V → 전송</b>만 하세요.</p>
+        <button id="sendFullCheckBtn" class="button primary" type="button">전체 검증을 AI에 맡기기</button>
+        <p>작업문이 복사되고 ChatGPT 새 채팅이 열립니다. 새 채팅에서 <b>Ctrl+V → 전송</b>하세요.</p>
       </div>
 
       <div class="return-box">
-        <div>
-          <span class="eyebrow">AI에서 돌아온 뒤</span>
-          <h3>AI 답변 전체를 그대로 붙여넣으세요</h3>
-          <p>코드블록, 앞뒤 설명, 사소한 쉼표 오류는 작업대가 최대한 자동으로 정리합니다.</p>
-        </div>
-        <textarea id="extractionAnswer" rows="10" placeholder="여기에 AI 답변 전체를 붙여넣기"></textarea>
-        <div class="row-actions">
-          <button id="applyExtractionBtn" class="button primary" type="button">주장 묶음 만들기</button>
-          <span id="extractionHint" class="hint"></span>
-        </div>
+        <div><span class="eyebrow">AI에서 돌아온 뒤</span><h3>AI 답변 전체를 붙여넣으세요</h3><p>주장별 판정과 출처가 한꺼번에 결과표로 들어갑니다. 코드블록과 앞뒤 설명은 최대한 자동으로 제거합니다.</p></div>
+        <textarea id="fullAnswer" rows="13" placeholder="여기에 AI 답변 전체를 붙여넣기"></textarea>
+        <div class="row-actions"><button id="applyFullAnswerBtn" class="button primary" type="button">전체 결과 반영</button><span id="fullHint" class="hint"></span></div>
       </div>
     </section>
 
     <section class="panel" data-panel="2">
       <div class="panel-title">
-        <div>
-          <span class="eyebrow">2단계</span>
-          <h2>같은 자료로 확인할 주장들을 한꺼번에 검증합니다</h2>
-          <p>주장 하나씩이 아니라 사건·통계 묶음 단위로 AI에 보냅니다.</p>
-        </div>
-        <div id="groupProgress" class="progress-pill">0 / 0 완료</div>
+        <div><span class="eyebrow">2단계</span><h2>원 주장과 실제 사실을 바로 비교합니다</h2><p>판정은 내용의 정확성에 관한 것입니다. ‘사실과 다름’이라고 해도 작성자가 고의로 거짓말했다는 뜻은 아닙니다.</p></div>
+        <div id="claimProgress" class="progress-pill">0개 주장</div>
       </div>
 
-      <div id="activeReturn" class="return-box hidden">
-        <div>
-          <span class="eyebrow">AI에서 돌아온 뒤</span>
-          <h3 id="activeReturnTitle">검증 결과 붙여넣기</h3>
-          <p>AI 답변 전체를 그대로 붙여넣으면 이 묶음의 여러 주장에 한꺼번에 적용됩니다.</p>
-        </div>
-        <textarea id="groupAnswer" rows="12" placeholder="여기에 AI 답변 전체를 붙여넣기"></textarea>
-        <div class="row-actions">
-          <button id="applyGroupBtn" class="button primary" type="button">이 묶음 결과 적용</button>
-          <button id="cancelGroupPasteBtn" class="button quiet" type="button">닫기</button>
-          <span id="groupHint" class="hint"></span>
-        </div>
-      </div>
+      <div id="summaryGrid" class="summary-grid"></div>
+      <div id="verdictFilters" class="filters"></div>
+      <div class="row-actions"><button id="toggleAllDetailsBtn" class="button quiet" type="button">세부 모두 펼치기</button></div>
+      <div id="claimList" class="claim-list empty">먼저 1단계에서 전체 검증 결과를 반영하세요.</div>
 
-      <div id="groupList" class="group-list empty">
-        먼저 1단계에서 AI 답변을 적용하세요.
-      </div>
+      <section class="deep-check">
+        <div class="deep-head">
+          <div><h3>정밀 재검증</h3><p>확인 불가·근거 부족 항목이나 다시 보고 싶은 주장만 골라 한 번에 보냅니다.</p></div>
+          <span id="deepCount" class="deep-count">0개 선택</span>
+        </div>
+        <div class="deep-actions">
+          <button id="sendDeepCheckBtn" class="button primary" type="button">선택한 항목을 한 번에 다시 검증</button>
+          <button id="clearDeepSelectionBtn" class="button quiet" type="button">선택 모두 해제</button>
+        </div>
+        <span id="deepHint" class="hint"></span>
+        <div id="deepReturnBox" class="return-box hidden">
+          <div><span class="eyebrow">AI에서 돌아온 뒤</span><h3>재검증 답변을 붙여넣으세요</h3></div>
+          <textarea id="deepAnswer" rows="12" placeholder="여기에 AI 답변 전체를 붙여넣기"></textarea>
+          <div class="row-actions"><button id="applyDeepAnswerBtn" class="button primary" type="button">재검증 결과 반영</button><button id="closeDeepReturnBtn" class="button quiet" type="button">닫기</button></div>
+        </div>
+      </section>
 
-      <div class="bottom-actions">
-        <button id="goContextBtn" class="button primary" type="button">전체 맥락 검토로</button>
-      </div>
+      <div class="bottom-actions"><button id="goUseBtn" class="button primary" type="button">결과 활용으로</button></div>
     </section>
 
     <section class="panel" data-panel="3">
       <div class="panel-title">
-        <div>
-          <span class="eyebrow">3단계</span>
-          <h2>검증된 사실들이 원래의 큰 결론을 실제로 뒷받침하는지 봅니다</h2>
-          <p>개별 사건의 사실 확인이 끝난 뒤, 비교 기준·맥락 누락·일반화 문제를 전체적으로 한 번만 검토합니다.</p>
-        </div>
+        <div><span class="eyebrow">3단계</span><h2>검증 결과를 원하는 형태로 꺼냅니다</h2><p>이미 확인된 결과만 사용해 댓글, 반박문, 사실 정리와 출처 목록을 만듭니다.</p></div>
       </div>
 
-      <div class="handoff">
-        <button id="sendContextBtn" class="button primary" type="button">전체 맥락 검토를 AI에 맡기기</button>
-        <p>완료된 묶음의 검증 결과가 한 프롬프트로 복사됩니다.</p>
+      <div class="use-tabs">
+        <button class="use-tab" data-use="short" type="button">짧은 댓글</button>
+        <button class="use-tab" data-use="detailed" type="button">조목조목 반박</button>
+        <button class="use-tab" data-use="facts" type="button">정확한 사실만</button>
+        <button class="use-tab" data-use="wrong" type="button">문제 주장만</button>
+        <button class="use-tab" data-use="sources" type="button">출처 목록</button>
       </div>
 
-      <div class="return-box">
-        <div>
-          <span class="eyebrow">AI에서 돌아온 뒤</span>
-          <h3>최종 답변을 붙여넣으세요</h3>
-        </div>
-        <textarea id="contextAnswer" rows="13" placeholder="여기에 AI 답변 전체를 붙여넣기"></textarea>
+      <div class="use-output-wrap">
+        <textarea id="useOutput" rows="22" placeholder="검증 결과를 적용하면 여기에 내용이 생성됩니다."></textarea>
         <div class="row-actions">
-          <button id="applyContextBtn" class="button primary" type="button">최종 결과 적용</button>
-          <span id="contextHint" class="hint"></span>
+          <button id="copyUseOutputBtn" class="button primary" type="button">복사</button>
+          <button id="downloadReportBtn" class="button quiet" type="button">전체 보고서 저장</button>
         </div>
       </div>
 
-      <article id="finalReport" class="report empty">아직 최종 결과가 없습니다.</article>
-      <div class="bottom-actions">
-        <button id="copyReportBtn" class="button quiet" type="button">결과 복사</button>
-        <button id="downloadReportBtn" class="button quiet" type="button">Markdown 저장</button>
-      </div>
+      <article id="overallReport" class="overall-report empty">아직 전체 판단이 없습니다.</article>
+
+      <section class="data-export" aria-labelledby="dataExportTitle">
+        <div class="data-export-head">
+          <div>
+            <h3 id="dataExportTitle">전체 데이터 내보내기</h3>
+            <p>화면용 요약이 아니라 원문, 주장별 판정, 차이, 출처, AI 원답과 복구된 구버전 자료까지 꺼냅니다.</p>
+          </div>
+        </div>
+        <div class="export-grid">
+          <button id="downloadDatasetJsonBtn" class="export-option" type="button">
+            <strong>연구용 전체 JSON</strong>
+            <span>빠지는 항목 없이 구조를 유지합니다. 다른 AI·코드 작업에 가장 적합합니다.</span>
+          </button>
+          <button id="downloadClaimsCsvBtn" class="export-option" type="button">
+            <strong>주장표 CSV</strong>
+            <span>주장 하나당 한 행입니다. 엑셀에서 판정·주제·확신도를 분류하기 좋습니다.</span>
+          </button>
+          <button id="downloadDatasetJsonlBtn" class="export-option" type="button">
+            <strong>AI 분석용 JSONL</strong>
+            <span>프로젝트 정보 뒤에 주장별 레코드가 한 줄씩 이어져 대량 분석에 편합니다.</span>
+          </button>
+          <button id="copyFullDatasetBtn" class="export-option" type="button">
+            <strong>전체 데이터 복사</strong>
+            <span>사람이 읽을 수 있는 전체 텍스트를 만들어 다른 채팅에 바로 붙여넣습니다.</span>
+          </button>
+        </div>
+        <small class="export-note">위쪽 ‘백업’은 이 작업대에서 이어 하기 위한 파일이고, 여기 내보내기는 재분석·통계·다른 도구 활용을 위한 데이터입니다.</small>
+      </section>
+
     </section>
   </main>
 
-  <dialog id="detailDialog">
+  <dialog id="claimDialog">
     <div class="dialog-head">
-      <h2 id="detailTitle">세부 결과</h2>
-      <button id="closeDetailBtn" class="icon-button" type="button" aria-label="닫기">×</button>
+      <div>
+        <span id="dialogVerdict" class="verdict-badge">판정</span>
+        <h2 id="dialogTitle">세부 검증</h2>
+      </div>
+      <button id="closeClaimDialogBtn" class="icon-button" type="button" aria-label="닫기">×</button>
     </div>
-    <div id="detailBody"></div>
+    <div id="claimDialogBody"></div>
   </dialog>
 
   <div id="toast" class="toast" aria-live="polite"></div>
-  <script src="prompts.js"></script>
-  <script src="app.js"></script>
+  <script>
+/* global window */
+window.FACT_PROMPTS = {
+  fullCheck(project) {
+    return `당신은 중립적인 사실 검증자다. 웹 검색을 실제로 사용하여 아래 원문 속 근거 주장들을 한 번에 조사하라.
+
+목표:
+1. 작성자가 결론의 근거로 사용하는 검증 가능한 사실 주장을 모두 원자 단위로 추출한다.
+2. 같은 사건·통계는 내부적으로 함께 조사하되, 결과는 주장별로 따로 판정한다.
+3. 원문과 실제 자료를 비교하여 무엇이 정확하고, 일부 사실이며, 과장되었거나 맥락이 빠졌고, 사실과 다른지 밝힌다.
+4. 현재 공개 자료에 가장 가까운 전체 사실을 복원한다.
+5. 검증 결과를 바탕으로 감정과 인신공격 없는 짧은 댓글과 조목조목 반박문을 만든다.
+
+프로젝트: ${project.title || '제목 없음'}
+
+원문:
+<source_text>
+${project.sourceText}
+</source_text>
+
+조사 원칙:
+- 의견, 욕설, 감정, 가치판단 자체는 팩트체크 대상에서 제외한다.
+- 사건 존재, 수치, 판결 결과, 판결 이유, 수사 과정, 인과관계, 비교 주장을 섞지 않는다.
+- 원문을 가장 합리적이고 유리한 의미로 먼저 해석한다.
+- 판결문, 법원·검찰·정부·공공기관 자료, 공식 통계와 당사자 원문 등 1차 자료를 우선한다.
+- 1차 자료가 없으면 서로 독립적인 신뢰 가능한 2차 자료를 교차 확인한다.
+- 주장에 유리한 자료와 범위를 제한하거나 충돌하는 자료를 모두 확인한다.
+- 찾지 못함, 확인 불가, 사실과 다름을 구분한다.
+- 판정은 정확함, 대체로 정확함, 일부 사실, 과장, 중요 맥락 누락, 사실과 다름, 근거 부족, 확인 불가 중 하나다.
+- 사실과 다름은 내용상 불일치를 뜻한다. 작성자가 고의로 거짓말했다고 판단하지 않는다.
+- 출처마다 그 자료에서 실제 확인되는 내용만 적는다.
+- URL을 실제 주소로 넣는다.
+- 질문하거나 작업 계획을 설명하지 말고 지금 바로 웹 검색과 검증을 실행한다.
+- 결과 외의 안내, 선택지, 확인 질문은 출력하지 않는다.
+- 반드시 아래 JSON 객체 하나만 출력한다. 코드블록은 사용하지 않는다.
+
+{
+  "claims": [
+    {
+      "id": "C1",
+      "topic": "사건 또는 통계 묶음 이름",
+      "original_excerpt": "원문의 대표 발췌",
+      "claim": "검증 가능한 단일 사실 주장",
+      "type": "사건|통계|법률|판결 결과|판결 이유|수사 과정|인과관계|비교|기타",
+      "importance": "핵심|보조",
+      "fair_interpretation": "원 주장을 가장 유리하고 합리적으로 해석한 문장",
+      "confirmed_facts": "자료에서 확인되는 사실",
+      "unconfirmed_parts": "확인되지 않거나 공개 자료만으로 판단할 수 없는 부분",
+      "differences": "원문과 실제 자료 사이의 구체적인 차이",
+      "corrected_statement": "자료에 가장 가까운 정확한 서술",
+      "verdict": "판정",
+      "confidence": "낮음|중간|높음",
+      "needs_deeper_check": false,
+      "sources": [
+        {
+          "title": "출처명",
+          "url": "실제 URL",
+          "grade": "1차 자료|신뢰 가능한 2차 자료|보조 자료|출처 품질 불명",
+          "supports": "이 출처에서 직접 확인되는 내용"
+        }
+      ]
+    }
+  ],
+  "analysis": {
+    "accurate_points": ["원문에서 정확했던 핵심 부분"],
+    "distorted_points": ["과장되거나 사실과 달랐던 핵심 부분"],
+    "unsupported_leaps": ["개별 사실에서 전체 결론으로 넘어갈 때의 근거 없는 비약"],
+    "missing_comparisons": ["전체 결론을 입증하려면 추가로 필요한 비교 자료"]
+  },
+  "overall": {
+    "verdict": "전체 판정",
+    "summary": "원문의 사실 정확성과 전체 결론을 구분한 요약",
+    "accurate_reconstruction": "현재 자료에 가장 가까운 전체 사실 복원",
+    "short_response": "검증 결과를 활용한 짧은 댓글",
+    "detailed_response": "주장별로 조목조목 정리한 반박 또는 교정문"
+  }
+}`;
+  },
+
+  deepCheck(project, claims) {
+    const target = claims.map(c => ({
+      id: c.id,
+      topic: c.topic,
+      original_excerpt: c.originalExcerpt,
+      claim: c.text,
+      type: c.type,
+      current_verdict: c.verdict,
+      current_facts: c.confirmedFacts,
+      current_differences: c.differences
+    }));
+    return `아래 메시지는 설명이나 작업계획 검토 요청이 아니라 즉시 실행해야 하는 사실검증 명령이다. 질문하거나 선택지를 제시하지 말고, 지금 바로 웹 검색을 사용하여 선택된 주장들을 재검증하라.
+
+프로젝트: ${project.title || '제목 없음'}
+원문 전체 맥락:
+${project.sourceText || '원문 없음'}
+
+재검증 대상:
+${JSON.stringify(target, null, 2)}
+
+규칙:
+1. 각 id의 주장만 재검증한다. 새로운 주장을 임의로 추가하지 않는다.
+2. 기존 결과는 참고 사항일 뿐 정답으로 간주하지 않는다. 원자료부터 다시 확인한다.
+3. 판결문, 법원·검찰·정부·공공기관 자료와 공식 통계를 우선한다.
+4. 주장에 유리한 자료와 범위를 제한하거나 충돌하는 자료를 모두 조사한다.
+5. 여러 주장은 함께 검색해도 결과는 id별로 별도 작성한다.
+6. 찾지 못함, 확인 불가, 사실과 다름을 구분한다.
+7. 작성자의 고의나 성향은 판단하지 않는다.
+8. 판정은 정확함, 대체로 정확함, 일부 사실, 과장, 중요 맥락 누락, 사실과 다름, 근거 부족, 확인 불가 중 하나다.
+9. 질문, 선택지, 작업 설명, 사전 안내를 출력하지 않는다. 지금 즉시 검증을 수행한다.
+10. 반드시 아래 JSON 객체 하나만 출력한다. 코드블록과 JSON 밖의 문장은 사용하지 않는다.
+
+{
+  "claims": [
+    {
+      "id": "원래 id",
+      "fair_interpretation": "가장 유리한 해석",
+      "confirmed_facts": "확인된 사실",
+      "unconfirmed_parts": "확인되지 않은 부분",
+      "differences": "원문과 자료의 구체적인 차이",
+      "corrected_statement": "정확한 서술",
+      "verdict": "판정",
+      "confidence": "낮음|중간|높음",
+      "needs_deeper_check": false,
+      "sources": [
+        {
+          "title": "출처명",
+          "url": "실제 URL",
+          "grade": "자료 등급",
+          "supports": "직접 확인되는 내용"
+        }
+      ]
+    }
+  ]
+}`;
+  }
+};
+  </script>
+  <script>
+/* global FACT_PROMPTS */
+(() => {
+  'use strict';
+  const KEY = 'fact-workbench-onepass-v1';
+  const DB_NAME = 'fact-workbench-storage';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'projects';
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const emptyAnalysis = () => ({ accuratePoints: [], distortedPoints: [], unsupportedLeaps: [], missingComparisons: [] });
+  const initial = () => ({ version: 3, step: 1, title: '', sourceText: '', fullAnswer: '', claims: [], analysis: emptyAnalysis(), overall: null, filter: '전체', selectedDeepIds: [], deepAnswer: '', useMode: 'short', updatedAt: '' });
+  let state = initial();
+  let saveTimer = null;
+  let dbPromise = null;
+
+  function openDb() {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('이 브라우저는 IndexedDB를 지원하지 않습니다.'));
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('저장소를 열 수 없습니다.'));
+    });
+    return dbPromise;
+  }
+  async function dbGet(key) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const request = tx.objectStore(STORE_NAME).get(key);
+      request.onsuccess = () => resolve(request.result ?? null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+  async function dbSet(key, value) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('저장 실패'));
+    });
+  }
+  async function dbDelete(key) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function loadStoredState() {
+    try {
+      const stored = await dbGet(KEY);
+      if (stored && typeof stored === 'object') return stored;
+    } catch (error) { console.warn('IndexedDB 불러오기 실패', error); }
+    try {
+      const legacyText = localStorage.getItem(KEY);
+      if (legacyText) {
+        const legacy = JSON.parse(legacyText);
+        const migrated = legacy?.groups && !legacy?.claims
+          ? migrateBackup(legacy)
+          : Object.assign(initial(), legacy);
+        try { await dbSet(KEY, migrated); localStorage.removeItem(KEY); } catch (_) {}
+        return migrated;
+      }
+    } catch (error) { console.warn('기존 저장값 불러오기 실패', error); }
+    return initial();
+  }
+  function save(options = {}) {
+    state.updatedAt = new Date().toISOString();
+    clearTimeout(saveTimer);
+    const write = async () => {
+      try {
+        await dbSet(KEY, state);
+      } catch (error) {
+        console.error(error);
+        toast('자동 저장 실패: 백업 파일을 내려받아 주세요.');
+      }
+    };
+    if (options.immediate) return write();
+    saveTimer = setTimeout(write, 140);
+  }
+  function toast(message) {
+    const el = $('#toast'); el.textContent = message; el.classList.add('show');
+    clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+  function escapeHtml(value = '') { return String(value).replace(/[&<>'"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); }
+  function stripFences(text) { return String(text || '').replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim(); }
+  function extractBalanced(text) {
+    const starts = [text.indexOf('{'), text.indexOf('[')].filter(i => i >= 0);
+    if (!starts.length) return '';
+    const start = Math.min(...starts); const open = text[start]; const close = open === '{' ? '}' : ']';
+    let depth = 0, string = false, escape = false;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (string) { if (escape) escape = false; else if (ch === '\\') escape = true; else if (ch === '"') string = false; continue; }
+      if (ch === '"') { string = true; continue; }
+      if (ch === open) depth++; else if (ch === close && --depth === 0) return text.slice(start, i + 1);
+    }
+    return text.slice(start);
+  }
+  function repairJson(text) {
+    return text
+      .replace(/[“”]/g, '"').replace(/[‘’]/g, "'")
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(/}\s*{/g, '},{')
+      .replace(/]\s*\[/g, '],[')
+      .replace(/([}\]"\d])\s*\n\s*("[^"\n]+"\s*:)/g, '$1,$2');
+  }
+  function parseAIAnswer(raw) {
+    const source = extractBalanced(stripFences(raw));
+    if (!source) throw new Error('답변에서 데이터 부분을 찾지 못했습니다. AI 답변 전체를 붙여넣었는지 확인하세요.');
+    const attempts = [source, repairJson(source)];
+    let error;
+    for (const candidate of attempts) { try { return JSON.parse(candidate); } catch (e) { error = e; } }
+    throw new Error(`AI 답변 형식을 읽지 못했습니다: ${error.message}`);
+  }
+  function arr(value) { return Array.isArray(value) ? value : value == null ? [] : [value]; }
+  function pick(obj, ...keys) { for (const key of keys) if (obj && obj[key] != null) return obj[key]; return ''; }
+  function normalizeSources(value) { return arr(value).map(s => typeof s === 'string' ? { title: s, url: '', grade: '', supports: '' } : ({ title: pick(s,'title','name'), url: pick(s,'url','link'), grade: pick(s,'grade','quality'), supports: pick(s,'supports','excerpt','content') })); }
+  function normalizeClaim(raw, index) {
+    return {
+      id: String(pick(raw,'id','claim_id') || `C${index + 1}`),
+      topic: pick(raw,'topic','group','group_title') || '기타',
+      originalExcerpt: pick(raw,'original_excerpt','originalExcerpt','excerpt'),
+      text: pick(raw,'claim','text','statement'),
+      type: pick(raw,'type','claim_type') || '기타',
+      importance: pick(raw,'importance') || '보조',
+      fairInterpretation: pick(raw,'fair_interpretation','fairInterpretation'),
+      confirmedFacts: pick(raw,'confirmed_facts','confirmedFacts','facts'),
+      unconfirmedParts: pick(raw,'unconfirmed_parts','unconfirmedParts'),
+      differences: pick(raw,'differences','difference'),
+      correctedStatement: pick(raw,'corrected_statement','correctedStatement','correction'),
+      verdict: pick(raw,'verdict','judgment') || '미검증',
+      confidence: pick(raw,'confidence') || '중간',
+      needsDeeperCheck: Boolean(pick(raw,'needs_deeper_check','needsDeeperCheck')),
+      sources: normalizeSources(pick(raw,'sources','references'))
+    };
+  }
+  function flattenLegacyGroups(groups = []) {
+    const claims = [];
+    groups.forEach(group => {
+      (group.claims || []).forEach((claim, index) => {
+        const result = claim.result || claim.fact || {};
+        claims.push(normalizeClaim({
+          id: claim.id,
+          topic: group.title || group.id || '기타',
+          original_excerpt: claim.originalExcerpt || claim.original_excerpt,
+          claim: claim.text || claim.claim,
+          type: claim.type,
+          importance: claim.importance || '보조',
+          fair_interpretation: result.fairInterpretation || result.fair_interpretation,
+          confirmed_facts: result.confirmedFacts || result.confirmed_facts,
+          unconfirmed_parts: result.unconfirmedParts || result.unconfirmed_parts,
+          differences: result.differences,
+          corrected_statement: result.correctedStatement || result.corrected_statement,
+          verdict: result.verdict || '미검증',
+          confidence: result.confidence || '중간',
+          needs_deeper_check: result.needsDeeperCheck || result.needs_deeper_check,
+          sources: result.sources || []
+        }, claims.length + index));
+      });
+    });
+    return claims;
+  }
+  function migrateBackup(raw) {
+    if (raw?.version === 3 && Array.isArray(raw.claims)) return Object.assign(initial(), raw);
+    if (Array.isArray(raw?.claims) && !raw.groups) {
+      const normalized = Object.assign(initial(), raw);
+      normalized.version = 3;
+      normalized.claims = raw.claims.map(normalizeClaim);
+      return normalized;
+    }
+    if (Array.isArray(raw?.groups)) {
+      const claims = flattenLegacyGroups(raw.groups);
+      const wrongLinks = new Set();
+      raw.groups.forEach(group => {
+        (group.claims || []).forEach(claim => {
+          const resultText = JSON.stringify(claim.result || claim.fact || {});
+          const claimText = String(claim.text || claim.claim || '');
+          if (/부산 돌려차기/.test(claimText) && /강남역|조현병|2017도1213|징역 30년/.test(resultText)) wrongLinks.add(claim.id);
+        });
+      });
+      claims.forEach(c => {
+        if (wrongLinks.has(c.id)) {
+          c.needsDeeperCheck = true;
+          c.verdict = '재확인 필요';
+          c.differences = `${c.differences ? `${c.differences}\n\n` : ''}복구 검사: 이 주장에 다른 사건의 결과가 연결된 흔적이 있어 정밀 재검증 대상으로 표시했습니다.`;
+        }
+      });
+      return {
+        ...initial(),
+        version: 3,
+        step: Math.min(3, Math.max(1, Number(raw.step) || 2)),
+        title: raw.title || '',
+        sourceText: raw.sourceText || '',
+        fullAnswer: raw.extractionAnswer || '',
+        claims,
+        analysis: emptyAnalysis(),
+        overall: raw.final ? {
+          verdict: raw.final.verdict || '기존 결과 복구',
+          summary: raw.final.summary || raw.final.conclusion || '',
+          accurateReconstruction: raw.final.accurateReconstruction || '',
+          shortResponse: raw.final.shortResponse || '',
+          detailedResponse: raw.final.detailedResponse || ''
+        } : null,
+        legacyGroups: raw.groups,
+        legacyContextAnswer: raw.contextAnswer || '',
+        legacyFinal: raw.final || null,
+        selectedDeepIds: [...new Set([...claims.filter(c => c.verdict === '미검증' || c.needsDeeperCheck).map(c => c.id), ...wrongLinks])]
+      };
+    }
+    throw new Error('지원하지 않는 백업 형식입니다.');
+  }
+
+  function setStep(step) { state.step = Number(step); $$('.steps button').forEach(b => b.classList.toggle('active', Number(b.dataset.step) === state.step)); $$('.panel').forEach(p => p.classList.toggle('active', Number(p.dataset.panel) === state.step)); save(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function render() {
+    $('#projectTitle').value = state.title; $('#sourceText').value = state.sourceText; $('#fullAnswer').value = state.fullAnswer || ''; $('#deepAnswer').value = state.deepAnswer || '';
+    renderSummary(); renderClaims(); renderDeepCount(); renderUseOutput(); renderOverall();
+    $$('.use-tab').forEach(b => b.classList.toggle('active', b.dataset.use === state.useMode));
+    setStep(state.step || 1);
+  }
+  function verdictClass(verdict) {
+    if (/정확함/.test(verdict) && !/대체로/.test(verdict)) return 'verdict-accurate';
+    if (/대체로|일부|과장|맥락|재확인/.test(verdict)) return 'verdict-partial';
+    if (/사실과 다름/.test(verdict)) return 'verdict-wrong';
+    return 'verdict-unknown';
+  }
+  function statusCategory(v) {
+    if (v === '정확함' || v === '대체로 정확함') return '정확';
+    if (v === '일부 사실' || v === '과장' || v === '중요 맥락 누락' || v === '재확인 필요') return '일부·과장';
+    if (v === '사실과 다름') return '사실과 다름';
+    return '미확정';
+  }
+  function renderSummary() {
+    const total = state.claims.length; const counts = { '정확':0, '일부·과장':0, '사실과 다름':0, '미확정':0 };
+    state.claims.forEach(c => counts[statusCategory(c.verdict)]++);
+    $('#claimProgress').textContent = `${total}개 주장`;
+    $('#summaryGrid').innerHTML = Object.entries(counts).map(([k,v]) => `<div class="summary-card"><strong>${v}</strong><span>${k}</span></div>`).join('');
+    const filters = ['전체','정확','일부·과장','사실과 다름','미확정'];
+    $('#verdictFilters').innerHTML = filters.map(f => `<button class="filter ${state.filter===f?'active':''}" data-filter="${f}" type="button">${f}</button>`).join('');
+    $$('#verdictFilters .filter').forEach(b => b.onclick = () => { state.filter = b.dataset.filter; renderClaims(); renderSummary(); save(); });
+  }
+  function renderClaims() {
+    const visible = state.claims.filter(c => state.filter === '전체' || statusCategory(c.verdict) === state.filter);
+    if (!visible.length) { $('#claimList').className='claim-list empty'; $('#claimList').textContent = state.claims.length ? '이 조건에 맞는 주장이 없습니다.' : '먼저 1단계에서 전체 검증 결과를 반영하세요.'; return; }
+    $('#claimList').className='claim-list';
+    $('#claimList').innerHTML = visible.map(c => `
+      <article class="claim-row" data-id="${escapeHtml(c.id)}">
+        <div class="claim-main">
+          <input class="deep-select" type="checkbox" ${state.selectedDeepIds.includes(c.id)?'checked':''} aria-label="재검증 선택" />
+          <div><h4>${escapeHtml(c.text)}</h4><div class="claim-meta"><span>${escapeHtml(c.id)}</span><span>${escapeHtml(c.topic)}</span><span>${escapeHtml(c.type)}</span>${c.needsDeeperCheck?'<span>정밀 확인 권장</span>':''}</div></div>
+          <span class="verdict-badge ${verdictClass(c.verdict)}">${escapeHtml(c.verdict)}</span>
+          <button class="claim-toggle" type="button">실제 사실과 차이 보기</button>
+        </div>
+        <div class="claim-detail">
+          <div class="detail-grid">
+            <div class="detail-box"><b>원문 발췌</b><p>${escapeHtml(c.originalExcerpt || '없음')}</p></div>
+            <div class="detail-box"><b>확인된 사실</b><p>${escapeHtml(c.confirmedFacts || '아직 확인되지 않음')}</p></div>
+            <div class="detail-box"><b>원문과 차이</b><p>${escapeHtml(c.differences || '차이 정보 없음')}</p></div>
+            <div class="detail-box"><b>가장 정확한 표현</b><p>${escapeHtml(c.correctedStatement || '없음')}</p></div>
+          </div>
+          ${c.sources.length ? `<ol class="sources">${c.sources.map(s => `<li><b>${escapeHtml(s.title||'출처')}</b>${s.url?` — <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.url)}</a>`:''}<br>${escapeHtml(s.supports||'')}</li>`).join('')}</ol>` : ''}
+        </div>
+      </article>`).join('');
+    $$('.claim-row').forEach(row => {
+      const id = row.dataset.id; const c = state.claims.find(x => x.id === id);
+      row.querySelector('.claim-toggle').onclick = () => row.classList.toggle('open');
+      row.querySelector('.deep-select').onchange = e => { if(e.target.checked) state.selectedDeepIds = [...new Set([...state.selectedDeepIds,id])]; else state.selectedDeepIds = state.selectedDeepIds.filter(x=>x!==id); renderDeepCount(); save(); };
+      row.querySelector('h4').onclick = () => showClaim(c);
+    });
+  }
+  function renderDeepCount() { $('#deepCount').textContent = `${state.selectedDeepIds.length}개 선택`; }
+  function showClaim(c) {
+    $('#dialogVerdict').className=`verdict-badge ${verdictClass(c.verdict)}`; $('#dialogVerdict').textContent=c.verdict; $('#dialogTitle').textContent=c.text;
+    $('#claimDialogBody').innerHTML = `<p><b>원문 발췌</b><br>${escapeHtml(c.originalExcerpt||'없음')}</p><p><b>가장 유리한 해석</b><br>${escapeHtml(c.fairInterpretation||'없음')}</p><p><b>확인된 사실</b><br>${escapeHtml(c.confirmedFacts||'없음')}</p><p><b>확인되지 않은 부분</b><br>${escapeHtml(c.unconfirmedParts||'없음')}</p><p><b>원문과 차이</b><br>${escapeHtml(c.differences||'없음')}</p><p><b>정확한 서술</b><br>${escapeHtml(c.correctedStatement||'없음')}</p>${c.sources.length?`<h3>출처</h3><ol class="sources">${c.sources.map(s=>`<li><b>${escapeHtml(s.title)}</b>${s.url?` — <a href="${escapeHtml(s.url)}" target="_blank">${escapeHtml(s.url)}</a>`:''}<br>${escapeHtml(s.grade)}<br>${escapeHtml(s.supports)}</li>`).join('')}</ol>`:''}`;
+    $('#claimDialog').showModal();
+  }
+  function renderOverall() { const o=state.overall; if(!o){$('#overallReport').className='overall-report empty';$('#overallReport').textContent='아직 전체 판단이 없습니다.';return;} $('#overallReport').className='overall-report'; $('#overallReport').textContent=`전체 판정: ${o.verdict||'없음'}\n\n${o.summary||''}\n\n가장 정확한 전체 사실\n${o.accurateReconstruction||''}`; }
+  function renderUseOutput() {
+    const builders = { short: buildShortResponse, detailed: buildDetailedResponse, facts: buildFactsOnly, wrong: buildProblemClaims, sources: buildSources };
+    $('#useOutput').value = (builders[state.useMode] || builders.short)();
+  }
+  function buildShortResponse() {
+    if (state.overall?.shortResponse) return state.overall.shortResponse;
+    const bad=state.claims.filter(c=>['일부 사실','과장','중요 맥락 누락','사실과 다름'].includes(c.verdict)).slice(0,4);
+    return bad.length ? `확인해보면 원문의 핵심 주장 중 일부는 그대로 사실이라고 보기 어렵습니다.\n${bad.map(c=>`- ${c.originalExcerpt||c.text}: ${c.correctedStatement||c.differences}`).join('\n')}` : '';
+  }
+  function buildDetailedResponse() {
+    if (state.overall?.detailedResponse) return state.overall.detailedResponse;
+    return state.claims.map((c,i)=>`${i+1}. 원 주장: ${c.text}\n판정: ${c.verdict}\n확인된 사실: ${c.confirmedFacts||'없음'}\n차이: ${c.differences||'없음'}\n정확한 표현: ${c.correctedStatement||'없음'}`).join('\n\n');
+  }
+  function buildFactsOnly() {
+    return state.claims.filter(c=>c.correctedStatement||c.confirmedFacts).map(c=>`- [${c.topic}] ${c.correctedStatement||c.confirmedFacts}`).join('\n');
+  }
+  function buildProblemClaims() {
+    return state.claims.filter(c=>!['정확함','대체로 정확함'].includes(c.verdict)).map(c=>`- 원문: ${c.originalExcerpt||c.text}\n  판정: ${c.verdict}\n  실제: ${c.correctedStatement||c.confirmedFacts||'확인 필요'}\n  차이: ${c.differences||'없음'}`).join('\n');
+  }
+  function buildSources() {
+    const seen=new Set(), lines=[]; state.claims.forEach(c=>c.sources.forEach(s=>{const key=s.url||`${s.title}-${s.supports}`;if(seen.has(key))return;seen.add(key);lines.push(`- ${s.title||'출처'}${s.url?`\n  ${s.url}`:''}${s.supports?`\n  확인 내용: ${s.supports}`:''}`);})); return lines.join('\n');
+  }
+  function copySync(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    const t=document.createElement('textarea');t.value=text;t.style.position='fixed';t.style.opacity='0';document.body.append(t);t.select();document.execCommand('copy');t.remove();return Promise.resolve();
+  }
+  async function handoff(text, after) {
+    if(!text.trim()) return toast('먼저 원문을 입력하세요.');
+    let copied=false; try{await copySync(text);copied=true;}catch(_){copied=false;}
+    const tab=window.open('https://chatgpt.com/','_blank'); if(tab)tab.opener=null;
+    toast(copied?'작업문을 복사했습니다. 새 채팅에 붙여넣으세요.':'새 채팅을 열었습니다. 브라우저가 복사를 막았습니다.'); if(after)after();
+  }
+  function applyFullAnswer() {
+    try {
+      const data=parseAIAnswer($('#fullAnswer').value); const claimsRaw=Array.isArray(data)?data:(data.claims||data.results||[]); if(!claimsRaw.length)throw new Error('주장별 결과를 찾지 못했습니다.');
+      state.fullAnswer=$('#fullAnswer').value; state.claims=claimsRaw.map(normalizeClaim);
+      const a=data.analysis||{}; state.analysis={ accuratePoints:arr(pick(a,'accurate_points','accuratePoints')), distortedPoints:arr(pick(a,'distorted_points','distortedPoints')), unsupportedLeaps:arr(pick(a,'unsupported_leaps','unsupportedLeaps')), missingComparisons:arr(pick(a,'missing_comparisons','missingComparisons')) };
+      const o=data.overall||{}; state.overall={ verdict:pick(o,'verdict'), summary:pick(o,'summary'), accurateReconstruction:pick(o,'accurate_reconstruction','accurateReconstruction'), shortResponse:pick(o,'short_response','shortResponse'), detailedResponse:pick(o,'detailed_response','detailedResponse') };
+      state.selectedDeepIds=state.claims.filter(c=>c.needsDeeperCheck||['근거 부족','확인 불가','미검증'].includes(c.verdict)).map(c=>c.id); state.filter='전체'; state.step=2; hint('#fullHint',`${state.claims.length}개 주장을 반영했습니다.`,'success'); save(); render();
+    } catch(e){hint('#fullHint',e.message,'error');}
+  }
+  function hint(sel,text,type=''){const el=$(sel);el.textContent=text;el.className=`hint ${type}`;}
+  function applyDeepAnswer() {
+    try {
+      const data=parseAIAnswer($('#deepAnswer').value); const claimsRaw=Array.isArray(data?.claims)?data.claims:Array.isArray(data)?data:[]; if(!claimsRaw.length)throw new Error('재검증 결과를 찾지 못했습니다.');
+      const updates=new Map(claimsRaw.map((c,i)=>[String(c.id||c.claim_id||state.selectedDeepIds[i]||''),normalizeClaim(c,i)]));
+      state.claims=state.claims.map(existing=>{const update=updates.get(existing.id);if(!update)return existing;return {...existing,...update,id:existing.id,topic:update.topic==='기타'?existing.topic:update.topic,text:update.text||existing.text,originalExcerpt:update.originalExcerpt||existing.originalExcerpt};});
+      state.deepAnswer=$('#deepAnswer').value; state.selectedDeepIds=state.selectedDeepIds.filter(id=>!updates.has(id)); $('#deepReturnBox').classList.add('hidden'); hint('#deepHint','재검증 결과를 반영했습니다.','success'); save();render();
+    }catch(e){hint('#deepHint',e.message,'error');}
+  }
+
+  function buildResearchDataset() {
+    return {
+      schema: 'fact-workbench-research-dataset',
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      project: {
+        title: state.title || '',
+        sourceText: state.sourceText || '',
+        updatedAt: state.updatedAt || ''
+      },
+      overall: state.overall || null,
+      analysis: state.analysis || { accuratePoints: [], distortedPoints: [], unsupportedLeaps: [], missingComparisons: [] },
+      claims: (state.claims || []).map(c => ({
+        id: c.id,
+        topic: c.topic,
+        originalExcerpt: c.originalExcerpt,
+        claim: c.text,
+        type: c.type,
+        importance: c.importance,
+        verdict: c.verdict,
+        confidence: c.confidence,
+        needsDeeperCheck: Boolean(c.needsDeeperCheck),
+        fairInterpretation: c.fairInterpretation,
+        confirmedFacts: c.confirmedFacts,
+        unconfirmedParts: c.unconfirmedParts,
+        differences: c.differences,
+        correctedStatement: c.correctedStatement,
+        sources: (c.sources || []).map(s => ({
+          title: s.title,
+          url: s.url,
+          grade: s.grade,
+          supports: s.supports
+        }))
+      })),
+      rawAiAnswers: {
+        fullCheckAnswer: state.fullAnswer || '',
+        latestDeepCheckAnswer: state.deepAnswer || ''
+      },
+      restoredLegacyData: {
+        groups: state.legacyGroups || null,
+        contextAnswer: state.legacyContextAnswer || '',
+        final: state.legacyFinal || null
+      },
+      workflow: {
+        appDataVersion: state.version || 3,
+        currentStep: state.step || 1,
+        selectedDeepIds: Array.isArray(state.selectedDeepIds) ? [...state.selectedDeepIds] : []
+      }
+    };
+  }
+  function csvCell(value) {
+    const text = typeof value === 'string' ? value : JSON.stringify(value ?? '');
+    return `"${String(text).replace(/"/g, '""')}"`;
+  }
+  function claimsCsv() {
+    const headers = [
+      'project_title','claim_id','topic','original_excerpt','claim','type','importance','verdict','confidence',
+      'needs_deeper_check','fair_interpretation','confirmed_facts','unconfirmed_parts','differences','corrected_statement',
+      'source_count','source_titles','source_urls','source_grades','source_supports','sources_json'
+    ];
+    const rows = (state.claims || []).map(c => {
+      const sources = c.sources || [];
+      return [
+        state.title || '', c.id, c.topic, c.originalExcerpt, c.text, c.type, c.importance, c.verdict, c.confidence,
+        Boolean(c.needsDeeperCheck), c.fairInterpretation, c.confirmedFacts, c.unconfirmedParts, c.differences, c.correctedStatement,
+        sources.length,
+        sources.map(s => s.title).join(' | '),
+        sources.map(s => s.url).join(' | '),
+        sources.map(s => s.grade).join(' | '),
+        sources.map(s => s.supports).join(' | '),
+        sources
+      ].map(csvCell).join(',');
+    });
+    return '\uFEFF' + [headers.map(csvCell).join(','), ...rows].join('\r\n');
+  }
+  function datasetJsonl() {
+    const dataset = buildResearchDataset();
+    const lines = [
+      JSON.stringify({ recordType: 'project', ...dataset.project }),
+      JSON.stringify({ recordType: 'overall', data: dataset.overall }),
+      JSON.stringify({ recordType: 'analysis', data: dataset.analysis })
+    ];
+    dataset.claims.forEach(claim => lines.push(JSON.stringify({ recordType: 'claim', projectTitle: dataset.project.title, ...claim })));
+    if (dataset.rawAiAnswers.fullCheckAnswer || dataset.rawAiAnswers.latestDeepCheckAnswer) {
+      lines.push(JSON.stringify({ recordType: 'rawAiAnswers', data: dataset.rawAiAnswers }));
+    }
+    if (dataset.restoredLegacyData.groups || dataset.restoredLegacyData.contextAnswer || dataset.restoredLegacyData.final) {
+      lines.push(JSON.stringify({ recordType: 'restoredLegacyData', data: dataset.restoredLegacyData }));
+    }
+    return lines.join('\n');
+  }
+  function fullDatasetText() {
+    const d = buildResearchDataset();
+    const lines = [
+      `# ${d.project.title || '팩트체크 전체 데이터'}`,
+      '',
+      '## 원문',
+      d.project.sourceText || '없음',
+      '',
+      '## 전체 판단',
+      `판정: ${d.overall?.verdict || '없음'}`,
+      d.overall?.summary || '',
+      '',
+      '## 가장 정확한 전체 사실',
+      d.overall?.accurateReconstruction || '없음',
+      '',
+      '## 전체 분석',
+      `정확했던 부분:\n${(d.analysis?.accuratePoints || []).map(x => `- ${x}`).join('\n') || '- 없음'}`,
+      `왜곡·과장된 부분:\n${(d.analysis?.distortedPoints || []).map(x => `- ${x}`).join('\n') || '- 없음'}`,
+      `근거 없는 비약:\n${(d.analysis?.unsupportedLeaps || []).map(x => `- ${x}`).join('\n') || '- 없음'}`,
+      `빠진 비교 자료:\n${(d.analysis?.missingComparisons || []).map(x => `- ${x}`).join('\n') || '- 없음'}`,
+      '',
+      '## 주장별 전체 데이터'
+    ];
+    d.claims.forEach((c, index) => {
+      lines.push('', `### ${index + 1}. [${c.id}] ${c.claim}`);
+      lines.push(`- 주제: ${c.topic || '기타'}`);
+      lines.push(`- 원문 발췌: ${c.originalExcerpt || '없음'}`);
+      lines.push(`- 유형: ${c.type || '기타'}`);
+      lines.push(`- 중요도: ${c.importance || '미분류'}`);
+      lines.push(`- 판정: ${c.verdict || '미검증'}`);
+      lines.push(`- 확신도: ${c.confidence || '없음'}`);
+      lines.push(`- 정밀 재검증 필요: ${c.needsDeeperCheck ? '예' : '아니오'}`);
+      lines.push(`- 가장 유리한 해석: ${c.fairInterpretation || '없음'}`);
+      lines.push(`- 확인된 사실: ${c.confirmedFacts || '없음'}`);
+      lines.push(`- 확인되지 않은 부분: ${c.unconfirmedParts || '없음'}`);
+      lines.push(`- 원문과 차이: ${c.differences || '없음'}`);
+      lines.push(`- 정확한 서술: ${c.correctedStatement || '없음'}`);
+      if (c.sources.length) {
+        lines.push('- 출처:');
+        c.sources.forEach((s, i) => {
+          lines.push(`  ${i + 1}. ${s.title || '출처 없음'}`);
+          if (s.url) lines.push(`     URL: ${s.url}`);
+          if (s.grade) lines.push(`     등급: ${s.grade}`);
+          if (s.supports) lines.push(`     확인 내용: ${s.supports}`);
+        });
+      } else lines.push('- 출처: 없음');
+    });
+    lines.push('', '## AI 원답');
+    lines.push('', '### 최초 전체 검증 답변', d.rawAiAnswers.fullCheckAnswer || '없음');
+    lines.push('', '### 최근 정밀 재검증 답변', d.rawAiAnswers.latestDeepCheckAnswer || '없음');
+    if (d.restoredLegacyData.contextAnswer || d.restoredLegacyData.final) {
+      lines.push('', '## 구버전 복구 자료');
+      if (d.restoredLegacyData.contextAnswer) lines.push('', '### 구버전 맥락 검토 원답', d.restoredLegacyData.contextAnswer);
+      if (d.restoredLegacyData.final) lines.push('', '### 구버전 최종 결과', JSON.stringify(d.restoredLegacyData.final, null, 2));
+    }
+    return lines.filter(v => v !== undefined && v !== null).join('\n');
+  }
+
+  function reportMarkdown() {
+    const lines=[`# ${state.title||'팩트체크 보고서'}`,'','## 전체 판단',state.overall?.verdict||'','',state.overall?.summary||'','','## 주장별 검증'];
+    state.claims.forEach((c,i)=>{lines.push('',`### ${i+1}. ${c.text}`,`- 판정: **${c.verdict}**`,`- 원문: ${c.originalExcerpt||'없음'}`,`- 확인된 사실: ${c.confirmedFacts||'없음'}`,`- 차이: ${c.differences||'없음'}`,`- 정확한 서술: ${c.correctedStatement||'없음'}`);if(c.sources.length){lines.push('- 출처:');c.sources.forEach(s=>lines.push(`  - ${s.title||'출처'}${s.url?` — ${s.url}`:''}: ${s.supports||''}`));}});
+    lines.push('','## 가장 정확한 전체 사실',state.overall?.accurateReconstruction||buildFactsOnly(),'','## 짧은 댓글',state.overall?.shortResponse||buildShortResponse(),'','## 조목조목 반박',state.overall?.detailedResponse||buildDetailedResponse());return lines.join('\n');
+  }
+  function download(name,text,type='text/plain'){const url=URL.createObjectURL(new Blob([text],{type:`${type};charset=utf-8`}));const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);}
+  function safeName(v){return String(v||'fact-workbench').replace(/[\\/:*?"<>|]/g,'-');}
+
+  $('#projectTitle').addEventListener('input',e=>{state.title=e.target.value;save();}); $('#sourceText').addEventListener('input',e=>{state.sourceText=e.target.value;save();}); $('#fullAnswer').addEventListener('input',e=>{state.fullAnswer=e.target.value;save();}); $('#deepAnswer').addEventListener('input',e=>{state.deepAnswer=e.target.value;save();});
+  $$('.steps button').forEach(b=>b.onclick=()=>setStep(b.dataset.step));
+  $('#sendFullCheckBtn').onclick=()=>handoff(FACT_PROMPTS.fullCheck({title:state.title,sourceText:state.sourceText})); $('#applyFullAnswerBtn').onclick=applyFullAnswer;
+  $('#sendDeepCheckBtn').onclick=()=>{const allSelected=state.claims.filter(c=>state.selectedDeepIds.includes(c.id));if(!allSelected.length)return toast('재검증할 항목을 먼저 선택하세요.');const claims=allSelected.slice(0,10);handoff(FACT_PROMPTS.deepCheck({title:state.title,sourceText:state.sourceText},claims),()=>$('#deepReturnBox').classList.remove('hidden'));toast(`${claims.length}개 주장만 복사했습니다. AI는 질문하지 않고 바로 검증하도록 지시했습니다.`);};
+  $('#clearDeepSelectionBtn').onclick=()=>{state.selectedDeepIds=[];save();render();toast('재검증 선택을 모두 해제했습니다.');};
+  $('#applyDeepAnswerBtn').onclick=applyDeepAnswer; $('#closeDeepReturnBtn').onclick=()=>$('#deepReturnBox').classList.add('hidden'); $('#goUseBtn').onclick=()=>setStep(3);
+  $$('#verdictFilters .filter').forEach(b=>b.onclick=()=>{state.filter=b.dataset.filter;$$('#verdictFilters .filter').forEach(x=>x.classList.toggle('active',x===b));renderClaims();save();});
+  $('#toggleAllDetailsBtn').onclick=()=>{const rows=$$('.claim-row');const open=!rows.every(r=>r.classList.contains('open'));rows.forEach(r=>r.classList.toggle('open',open));$('#toggleAllDetailsBtn').textContent=open?'세부 모두 접기':'세부 모두 펼치기';};
+  $$('.use-tab').forEach(b=>b.onclick=()=>{state.useMode=b.dataset.use;renderUseOutput();save();});
+  $('#copyUseOutputBtn').onclick=()=>{const text=$('#useOutput').value;if(!text)return toast('복사할 결과가 없습니다.');copySync(text);toast('복사했습니다.');}; $('#downloadReportBtn').onclick=()=>download(`${safeName(state.title)}.md`,reportMarkdown(),'text/markdown');
+
+  $('#downloadDatasetJsonBtn').onclick = () => {
+    if (!state.claims.length && !state.sourceText) return toast('내보낼 데이터가 없습니다.');
+    download(`${safeName(state.title)}-전체데이터.json`, JSON.stringify(buildResearchDataset(), null, 2), 'application/json');
+    toast('연구용 전체 JSON을 저장했습니다.');
+  };
+  $('#downloadClaimsCsvBtn').onclick = () => {
+    if (!state.claims.length) return toast('내보낼 주장 데이터가 없습니다.');
+    download(`${safeName(state.title)}-주장표.csv`, claimsCsv(), 'text/csv');
+    toast('주장표 CSV를 저장했습니다.');
+  };
+  $('#downloadDatasetJsonlBtn').onclick = () => {
+    if (!state.claims.length && !state.sourceText) return toast('내보낼 데이터가 없습니다.');
+    download(`${safeName(state.title)}-AI분석용.jsonl`, datasetJsonl(), 'application/x-ndjson');
+    toast('AI 분석용 JSONL을 저장했습니다.');
+  };
+  $('#copyFullDatasetBtn').onclick = () => {
+    if (!state.claims.length && !state.sourceText) return toast('복사할 데이터가 없습니다.');
+    copySync(fullDatasetText());
+    toast('원문과 모든 검증 데이터를 복사했습니다.');
+  };
+
+  $('#closeClaimDialogBtn').onclick=()=>$('#claimDialog').close(); $('#claimDialog').addEventListener('click',e=>{if(e.target===$('#claimDialog'))$('#claimDialog').close();});
+  $('#exportBtn').onclick=()=>download(`${safeName(state.title)}-backup.json`,JSON.stringify(state,null,2),'application/json');
+  $('#importFile').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;const raw=JSON.parse(await file.text());state=migrateBackup(raw);save({immediate:true});render();setStep(state.step||1);const restored=state.claims.filter(c=>c.verdict!=='미검증').length;toast(`복구 완료: ${state.claims.length}개 주장, 기존 결과 ${restored}개`);}catch(err){toast(`복구 실패: ${err.message}`);}finally{e.target.value='';}};
+  $('#resetBtn').onclick=async()=>{if(!confirm('현재 작업을 지울까요? 먼저 백업을 내려받는 것이 안전합니다.'))return;state=initial();try{await dbDelete(KEY);}catch(_){}render();toast('새 작업을 시작했습니다.');};
+
+  (async()=>{state=Object.assign(initial(),await loadStoredState());if(Array.isArray(state.groups)&&!state.claims?.length)state=migrateBackup(state);render();})();
+})();
+  </script>
 </body>
 </html>
