@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="댓글과 주장 속 근거를 원자료와 대조하는 단계형 팩트체크 작업대" />
+  <meta name="description" content="댓글 속 근거를 사건 묶음별로 검증하는 간단한 팩트체크 작업대" />
   <title>Fact Workbench</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -11,372 +11,136 @@
   <header class="topbar">
     <div>
       <h1>Fact Workbench</h1>
-      <p>상대를 반박하기 전에, 실제로 확인되는 사실부터 복원합니다.</p>
+      <p>원문 한 번, 사건 묶음별 검증, 마지막 전체 검토.</p>
     </div>
     <div class="top-actions">
-      <span id="saveStatus" class="save-status">저장됨</span>
-      <button id="exportBtn" class="button secondary" type="button">JSON 내보내기</button>
-      <label class="button secondary file-button">
-        JSON 가져오기
-        <input id="importFile" type="file" accept="application/json,.json" hidden />
-      </label>
-      <button id="resetBtn" class="button danger ghost" type="button">초기화</button>
+      <span id="saveStatus">자동 저장</span>
+      <button id="exportBtn" class="button quiet" type="button">백업</button>
+      <label class="button quiet file-label">복구<input id="importFile" type="file" accept=".json,application/json" hidden /></label>
+      <button id="resetBtn" class="button quiet danger" type="button">새 작업</button>
     </div>
   </header>
 
-  <nav id="stepNav" class="step-nav" aria-label="작업 단계">
-    <button type="button" data-step="1"><span>1</span> 원문</button>
-    <button type="button" data-step="2"><span>2</span> 주장 추출</button>
-    <button type="button" data-step="3"><span>3</span> 1차 사실 검증</button>
-    <button type="button" data-step="4"><span>4</span> 2차 맥락 검토</button>
-    <button type="button" data-step="5"><span>5</span> 종합</button>
+  <nav class="steps" aria-label="작업 단계">
+    <button data-step="1" type="button"><b>1</b><span>원문과 주장 추출</span></button>
+    <button data-step="2" type="button"><b>2</b><span>사건 묶음 검증</span></button>
+    <button data-step="3" type="button"><b>3</b><span>전체 맥락 검토</span></button>
   </nav>
 
-  <main class="layout">
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h2>검증 주장</h2>
-        <button id="addClaimBtn" class="icon-button" type="button" title="주장 직접 추가">＋</button>
+  <main>
+    <section class="panel" data-panel="1">
+      <div class="panel-title">
+        <div>
+          <span class="eyebrow">1단계</span>
+          <h2>원문에서 검증할 근거를 뽑습니다</h2>
+          <p>원문은 딱 한 번만 AI에 보냅니다. AI가 주장들을 같은 사건끼리 묶어서 돌려줍니다.</p>
+        </div>
       </div>
-      <div id="claimStats" class="claim-stats">0개</div>
-      <div id="claimList" class="claim-list empty-state">아직 추출된 주장이 없습니다.</div>
-    </aside>
 
-    <section class="workspace">
-      <section class="step-panel" data-panel="1">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">STEP 1</p>
-            <h2>원문 보존</h2>
-            <p>욕설과 감정은 그대로 보존하되, 검증 과정에서는 사실 주장만 분리합니다.</p>
-          </div>
+      <label class="field compact">
+        <span>작업 이름 <small>선택</small></span>
+        <input id="projectTitle" type="text" placeholder="예: 유토피아 댓글 근거 검증" />
+      </label>
+      <label class="field">
+        <span>원문</span>
+        <textarea id="sourceText" rows="16" placeholder="댓글 전체를 그대로 붙여넣으세요."></textarea>
+      </label>
+
+      <div class="handoff">
+        <button id="sendExtractionBtn" class="button primary" type="button">원문 분석을 AI에 맡기기</button>
+        <p>프롬프트가 복사되고 ChatGPT 새 채팅이 열립니다. 새 채팅에서 <b>Ctrl+V → 전송</b>만 하세요.</p>
+      </div>
+
+      <div class="return-box">
+        <div>
+          <span class="eyebrow">AI에서 돌아온 뒤</span>
+          <h3>AI 답변 전체를 그대로 붙여넣으세요</h3>
+          <p>코드블록, 앞뒤 설명, 사소한 쉼표 오류는 작업대가 최대한 자동으로 정리합니다.</p>
         </div>
-
-        <label class="field">
-          <span>작업 이름</span>
-          <input id="projectTitle" type="text" placeholder="예: 유토피아 댓글 근거 검증" />
-        </label>
-
-        <label class="field">
-          <span>원문</span>
-          <textarea id="sourceText" rows="18" placeholder="댓글 묶음이나 검증할 글을 그대로 붙여넣으세요."></textarea>
-        </label>
-
-        <div class="notice">
-          <strong>이 단계의 목적</strong>
-          <p>작성자를 평가하지 않습니다. 사건, 수치, 판결 이유, 수사 과정, 비교처럼 검증 가능한 문장만 다음 단계로 넘깁니다.</p>
+        <textarea id="extractionAnswer" rows="10" placeholder="여기에 AI 답변 전체를 붙여넣기"></textarea>
+        <div class="row-actions">
+          <button id="applyExtractionBtn" class="button primary" type="button">주장 묶음 만들기</button>
+          <span id="extractionHint" class="hint"></span>
         </div>
+      </div>
+    </section>
 
-        <div class="panel-actions">
-          <button id="copyExtractPromptBtn" class="button primary" type="button">주장 추출 프롬프트 복사</button>
-          <button class="button secondary next-step" data-next="2" type="button">다음 단계</button>
+    <section class="panel" data-panel="2">
+      <div class="panel-title">
+        <div>
+          <span class="eyebrow">2단계</span>
+          <h2>같은 자료로 확인할 주장들을 한꺼번에 검증합니다</h2>
+          <p>주장 하나씩이 아니라 사건·통계 묶음 단위로 AI에 보냅니다.</p>
         </div>
-      </section>
+        <div id="groupProgress" class="progress-pill">0 / 0 완료</div>
+      </div>
 
-      <section class="step-panel" data-panel="2">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">STEP 2</p>
-            <h2>검증 가능한 주장으로 분해</h2>
-            <p>AI 응답을 붙여넣어 주장 카드를 만들거나 직접 추가할 수 있습니다.</p>
-          </div>
+      <div id="activeReturn" class="return-box hidden">
+        <div>
+          <span class="eyebrow">AI에서 돌아온 뒤</span>
+          <h3 id="activeReturnTitle">검증 결과 붙여넣기</h3>
+          <p>AI 답변 전체를 그대로 붙여넣으면 이 묶음의 여러 주장에 한꺼번에 적용됩니다.</p>
         </div>
-
-        <label class="field">
-          <span>AI의 주장 추출 결과(JSON)</span>
-          <textarea id="extractResult" rows="13" placeholder='{"claims":[{"original_excerpt":"...","claim":"...","type":"판결 이유"}]}'></textarea>
-        </label>
-
-        <div class="panel-actions left">
-          <button id="applyExtractBtn" class="button primary" type="button">JSON 적용</button>
-          <button id="copyExtractPromptBtn2" class="button secondary" type="button">추출 프롬프트 다시 복사</button>
+        <textarea id="groupAnswer" rows="12" placeholder="여기에 AI 답변 전체를 붙여넣기"></textarea>
+        <div class="row-actions">
+          <button id="applyGroupBtn" class="button primary" type="button">이 묶음 결과 적용</button>
+          <button id="cancelGroupPasteBtn" class="button quiet" type="button">닫기</button>
+          <span id="groupHint" class="hint"></span>
         </div>
+      </div>
 
-        <div class="section-divider"></div>
-        <div class="section-title-row">
-          <div>
-            <h3>추출된 주장</h3>
-            <p>한 카드에는 하나의 사실만 남기는 것이 좋습니다.</p>
-          </div>
-          <button id="addClaimBtn2" class="button secondary" type="button">주장 직접 추가</button>
+      <div id="groupList" class="group-list empty">
+        먼저 1단계에서 AI 답변을 적용하세요.
+      </div>
+
+      <div class="bottom-actions">
+        <button id="goContextBtn" class="button primary" type="button">전체 맥락 검토로</button>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="3">
+      <div class="panel-title">
+        <div>
+          <span class="eyebrow">3단계</span>
+          <h2>검증된 사실들이 원래의 큰 결론을 실제로 뒷받침하는지 봅니다</h2>
+          <p>개별 사건의 사실 확인이 끝난 뒤, 비교 기준·맥락 누락·일반화 문제를 전체적으로 한 번만 검토합니다.</p>
         </div>
-        <div id="claimEditorList" class="editor-list empty-state">추출 결과를 적용하면 여기에 표시됩니다.</div>
+      </div>
 
-        <div class="panel-actions">
-          <button class="button secondary next-step" data-next="1" type="button">이전</button>
-          <button class="button primary next-step" data-next="3" type="button">1차 검증으로</button>
+      <div class="handoff">
+        <button id="sendContextBtn" class="button primary" type="button">전체 맥락 검토를 AI에 맡기기</button>
+        <p>완료된 묶음의 검증 결과가 한 프롬프트로 복사됩니다.</p>
+      </div>
+
+      <div class="return-box">
+        <div>
+          <span class="eyebrow">AI에서 돌아온 뒤</span>
+          <h3>최종 답변을 붙여넣으세요</h3>
         </div>
-      </section>
-
-      <section class="step-panel" data-panel="3">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">STEP 3</p>
-            <h2>1차 사실 검증</h2>
-            <p>주장을 옹호하거나 반박하지 말고, 원자료와 일치하는 범위만 확정합니다.</p>
-          </div>
-          <span id="selectedClaimBadge" class="badge">주장 미선택</span>
+        <textarea id="contextAnswer" rows="13" placeholder="여기에 AI 답변 전체를 붙여넣기"></textarea>
+        <div class="row-actions">
+          <button id="applyContextBtn" class="button primary" type="button">최종 결과 적용</button>
+          <span id="contextHint" class="hint"></span>
         </div>
+      </div>
 
-        <div id="noClaimStep3" class="large-empty">왼쪽에서 검증할 주장을 선택하세요.</div>
-        <div id="factForm" class="hidden">
-          <div class="claim-focus">
-            <span>검증 대상</span>
-            <strong id="factClaimText"></strong>
-            <small id="factOriginalExcerpt"></small>
-          </div>
-
-          <div class="panel-actions left compact">
-            <button id="copyFactPromptBtn" class="button primary" type="button">1차 검증 프롬프트 복사</button>
-            <button id="toggleFactJsonBtn" class="button secondary" type="button">AI JSON 붙여넣기</button>
-          </div>
-
-          <div id="factJsonBox" class="json-box hidden">
-            <label class="field">
-              <span>AI의 1차 검증 결과(JSON)</span>
-              <textarea id="factResultJson" rows="10"></textarea>
-            </label>
-            <button id="applyFactJsonBtn" class="button secondary" type="button">현재 주장에 적용</button>
-          </div>
-
-          <div class="two-column">
-            <label class="field">
-              <span>주장을 가장 유리하게 해석한 문장</span>
-              <textarea id="fairInterpretation" rows="4"></textarea>
-            </label>
-            <label class="field">
-              <span>확인된 사실</span>
-              <textarea id="confirmedFacts" rows="4"></textarea>
-            </label>
-            <label class="field">
-              <span>확인되지 않은 부분</span>
-              <textarea id="unconfirmedParts" rows="4"></textarea>
-            </label>
-            <label class="field">
-              <span>원문과 실제 자료의 차이</span>
-              <textarea id="factDifferences" rows="4"></textarea>
-            </label>
-          </div>
-
-          <label class="field">
-            <span>자료에 가장 가까운 정확한 서술</span>
-            <textarea id="correctedStatement" rows="5"></textarea>
-          </label>
-
-          <div class="two-column compact-grid">
-            <label class="field">
-              <span>1차 판정</span>
-              <select id="factVerdict">
-                <option value="대기">대기</option>
-                <option value="정확함">정확함</option>
-                <option value="대체로 정확함">대체로 정확함</option>
-                <option value="일부 사실">일부 사실</option>
-                <option value="과장·맥락 누락">과장·맥락 누락</option>
-                <option value="사실과 다름">사실과 다름</option>
-                <option value="근거 부족">근거 부족</option>
-                <option value="확인 불가">확인 불가</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>확신도</span>
-              <select id="confidence">
-                <option value="낮음">낮음</option>
-                <option value="중간" selected>중간</option>
-                <option value="높음">높음</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="section-title-row source-heading">
-            <div>
-              <h3>출처</h3>
-              <p>출처명·URL·실제로 확인되는 내용을 한 세트로 저장합니다.</p>
-            </div>
-            <button id="addSourceBtn" class="button secondary" type="button">출처 추가</button>
-          </div>
-          <div id="sourceList" class="source-list empty-state">등록된 출처가 없습니다.</div>
-
-          <div class="panel-actions">
-            <button class="button secondary select-prev-claim" type="button">이전 주장</button>
-            <button id="saveFactBtn" class="button primary" type="button">저장하고 다음 주장</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="step-panel" data-panel="4">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">STEP 4</p>
-            <h2>2차 맥락 검토</h2>
-            <p>1차에서 확정된 사실만 사용해, 원문이 만든 함의가 적절한지 따집니다.</p>
-          </div>
-        </div>
-
-        <div id="noClaimStep4" class="large-empty">왼쪽에서 맥락을 검토할 주장을 선택하세요.</div>
-        <div id="contextForm" class="hidden">
-          <div class="claim-focus">
-            <span>검토 대상</span>
-            <strong id="contextClaimText"></strong>
-            <small id="contextFactSummary"></small>
-          </div>
-
-          <div class="panel-actions left compact">
-            <button id="copyContextPromptBtn" class="button primary" type="button">2차 검토 프롬프트 복사</button>
-            <button id="toggleContextJsonBtn" class="button secondary" type="button">AI JSON 붙여넣기</button>
-          </div>
-
-          <div id="contextJsonBox" class="json-box hidden">
-            <label class="field">
-              <span>AI의 2차 검토 결과(JSON)</span>
-              <textarea id="contextResultJson" rows="10"></textarea>
-            </label>
-            <button id="applyContextJsonBtn" class="button secondary" type="button">현재 주장에 적용</button>
-          </div>
-
-          <fieldset class="issue-grid">
-            <legend>발견된 문제 유형</legend>
-            <label><input type="checkbox" value="중요 맥락 누락" /> 중요 맥락 누락</label>
-            <label><input type="checkbox" value="범위 확대" /> 범위 확대</label>
-            <label><input type="checkbox" value="인과관계 비약" /> 인과관계 비약</label>
-            <label><input type="checkbox" value="의도 추정" /> 의도 추정</label>
-            <label><input type="checkbox" value="비교 기준 부재" /> 비교 기준 부재</label>
-            <label><input type="checkbox" value="사례 선택 편향" /> 사례 선택 편향</label>
-            <label><input type="checkbox" value="가능성을 확정으로 표현" /> 가능성을 확정으로 표현</label>
-            <label><input type="checkbox" value="문제 없음" /> 문제 없음</label>
-          </fieldset>
-
-          <label class="field">
-            <span>원문이 이 사실로 뒷받침하려는 상위 결론</span>
-            <textarea id="broaderConclusion" rows="4"></textarea>
-          </label>
-          <label class="field">
-            <span>사실과 결론 사이의 연결성</span>
-            <textarea id="supportAssessment" rows="5"></textarea>
-          </label>
-          <label class="field">
-            <span>빠진 맥락 또는 필요한 비교 자료</span>
-            <textarea id="missingContext" rows="5"></textarea>
-          </label>
-          <label class="field">
-            <span>과장 없이 다시 쓴 해석</span>
-            <textarea id="neutralInterpretation" rows="5"></textarea>
-          </label>
-
-          <label class="field">
-            <span>2차 판정</span>
-            <select id="contextVerdict">
-              <option value="대기">대기</option>
-              <option value="함의까지 대체로 타당">함의까지 대체로 타당</option>
-              <option value="부분적으로만 뒷받침">부분적으로만 뒷받침</option>
-              <option value="중요 맥락 누락">중요 맥락 누락</option>
-              <option value="과장된 해석">과장된 해석</option>
-              <option value="결론을 뒷받침하지 못함">결론을 뒷받침하지 못함</option>
-              <option value="판단 보류">판단 보류</option>
-            </select>
-          </label>
-
-          <div class="panel-actions">
-            <button class="button secondary select-prev-claim" type="button">이전 주장</button>
-            <button id="saveContextBtn" class="button primary" type="button">저장하고 다음 주장</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="step-panel" data-panel="5">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">STEP 5</p>
-            <h2>검증 결과 종합</h2>
-            <p>확인된 사실, 달라진 설명, 남은 불확실성을 한 문서로 정리합니다.</p>
-          </div>
-        </div>
-
-        <div class="summary-cards">
-          <div><strong id="summaryTotal">0</strong><span>전체 주장</span></div>
-          <div><strong id="summaryDone">0</strong><span>1차 완료</span></div>
-          <div><strong id="summaryMismatch">0</strong><span>차이 발견</span></div>
-          <div><strong id="summaryUnknown">0</strong><span>확인 불가·부족</span></div>
-        </div>
-
-        <div class="panel-actions left compact">
-          <button id="generateReportBtn" class="button primary" type="button">보고서 생성</button>
-          <button id="copyReportBtn" class="button secondary" type="button">보고서 복사</button>
-          <button id="downloadReportBtn" class="button secondary" type="button">Markdown 저장</button>
-          <button id="copySynthesisPromptBtn" class="button secondary" type="button">종합 프롬프트 복사</button>
-        </div>
-
-        <label class="field">
-          <span>종합 보고서</span>
-          <textarea id="reportOutput" rows="26" placeholder="‘보고서 생성’을 누르면 검증 결과가 정리됩니다."></textarea>
-        </label>
-      </section>
+      <article id="finalReport" class="report empty">아직 최종 결과가 없습니다.</article>
+      <div class="bottom-actions">
+        <button id="copyReportBtn" class="button quiet" type="button">결과 복사</button>
+        <button id="downloadReportBtn" class="button quiet" type="button">Markdown 저장</button>
+      </div>
     </section>
   </main>
 
-  <dialog id="claimDialog">
-    <form method="dialog" id="claimDialogForm">
-      <div class="dialog-heading">
-        <h2 id="claimDialogTitle">주장 추가</h2>
-        <button class="icon-button" value="cancel" aria-label="닫기">×</button>
-      </div>
-      <label class="field">
-        <span>원문 발췌</span>
-        <textarea id="dialogOriginal" rows="4"></textarea>
-      </label>
-      <label class="field">
-        <span>검증 가능한 단일 주장</span>
-        <textarea id="dialogClaim" rows="4" required></textarea>
-      </label>
-      <label class="field">
-        <span>유형</span>
-        <select id="dialogType">
-          <option>사건</option>
-          <option>통계</option>
-          <option>법률</option>
-          <option>판결 결과</option>
-          <option>판결 이유</option>
-          <option>수사 과정</option>
-          <option>인과관계</option>
-          <option>비교</option>
-          <option>기타</option>
-        </select>
-      </label>
-      <input id="dialogClaimId" type="hidden" />
-      <div class="panel-actions">
-        <button class="button secondary" value="cancel">취소</button>
-        <button id="saveClaimDialogBtn" class="button primary" value="default">저장</button>
-      </div>
-    </form>
+  <dialog id="detailDialog">
+    <div class="dialog-head">
+      <h2 id="detailTitle">세부 결과</h2>
+      <button id="closeDetailBtn" class="icon-button" type="button" aria-label="닫기">×</button>
+    </div>
+    <div id="detailBody"></div>
   </dialog>
 
-  <dialog id="sourceDialog">
-    <form method="dialog" id="sourceDialogForm">
-      <div class="dialog-heading">
-        <h2>출처 추가</h2>
-        <button class="icon-button" value="cancel" aria-label="닫기">×</button>
-      </div>
-      <label class="field"><span>출처명</span><input id="sourceTitle" type="text" required /></label>
-      <label class="field"><span>URL</span><input id="sourceUrl" type="url" placeholder="https://" /></label>
-      <label class="field">
-        <span>출처 등급</span>
-        <select id="sourceGrade">
-          <option>1차 자료</option>
-          <option>신뢰 가능한 2차 자료</option>
-          <option>보조 자료</option>
-          <option>출처 품질 불명</option>
-        </select>
-      </label>
-      <label class="field"><span>자료에서 직접 확인되는 내용</span><textarea id="sourceExcerpt" rows="5" required></textarea></label>
-      <input id="sourceEditId" type="hidden" />
-      <div class="panel-actions">
-        <button class="button secondary" value="cancel">취소</button>
-        <button id="saveSourceDialogBtn" class="button primary" value="default">저장</button>
-      </div>
-    </form>
-  </dialog>
-
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
+  <div id="toast" class="toast" aria-live="polite"></div>
   <script src="prompts.js"></script>
   <script src="app.js"></script>
 </body>
