@@ -1,0 +1,28 @@
+name: Improve author prompt UX
+
+on:
+  push:
+    paths:
+      - '.github/workflows/improve-author-prompt-ux.yml'
+      - 'scripts/improve-author-prompt-ux.py'
+
+permissions:
+  contents: write
+
+jobs:
+  improve-author-prompt-ux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make prompt generation visible and explicit
+        run: python scripts/improve-author-prompt-ux.py
+      - name: Check JavaScript syntax
+        run: node --check author-analysis.js
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add author-analysis.js index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Show author-analysis prompt before copying [skip ci]'
+          git push
