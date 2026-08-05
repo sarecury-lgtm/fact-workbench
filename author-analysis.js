@@ -259,7 +259,7 @@ ${author.hypothesis}
       .aa-number{display:inline-flex;width:27px;height:27px;border-radius:50%;align-items:center;justify-content:center;background:#252a32;color:#fff;font-size:12px;font-weight:800}.aa-status{font-size:12px;font-weight:750;color:var(--muted);background:var(--gray-soft);padding:7px 10px;border-radius:999px;white-space:nowrap}.aa-status.done{color:var(--green);background:var(--green-soft)}.aa-status.stale{color:var(--amber);background:var(--amber-soft)}
       .aa-dark{background:#252a32!important;color:#fff!important}.aa-result{display:grid;gap:13px;margin-top:18px}.aa-card{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff}.aa-card.core{border-color:#9ca3af;background:#f7f7f8}.aa-card.cold{border-color:#565b64;background:#292d34;color:#fff}.aa-card h4{margin:0 0 8px;font-size:15px}.aa-card p{margin:0;white-space:pre-wrap;line-height:1.65}.aa-card.cold .aa-muted{color:#cfd3da}.aa-muted{color:var(--muted)}
       .aa-patterns{display:grid;gap:11px}.aa-pattern{border:1px solid var(--line);border-radius:11px;padding:14px}.aa-pattern h5{margin:0 0 6px;font-size:14px}.aa-rank{display:inline-flex;min-width:25px;height:25px;align-items:center;justify-content:center;border-radius:50%;background:#252a32;color:#fff;margin-right:7px;font-size:12px}.aa-list{padding-left:20px;margin:9px 0 0}.aa-list li{margin:7px 0;line-height:1.55}.aa-chip{display:inline-flex;border-radius:999px;background:var(--gray-soft);padding:5px 8px;font-size:11px;color:#555d69;margin:8px 5px 0 0}
-      .aa-stale{border:1px solid #edcd85;background:#fff8e8;color:#765009;border-radius:10px;padding:12px 14px;margin:12px 0;line-height:1.5}.aa-hypothesis{background:#f8f8f9;border:1px solid var(--line);border-radius:11px;padding:14px;margin-top:14px}.aa-hypothesis textarea{min-height:110px}.aa-comparison{display:grid;grid-template-columns:1fr 1fr;gap:11px}.aa-comparison .aa-card:last-child{grid-column:1/-1}.aa-empty{color:var(--muted);text-align:center;padding:30px}.aa-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,15px);opacity:0;pointer-events:none;background:#20242b;color:#fff;padding:10px 14px;border-radius:9px;font-size:13px;transition:.18s;z-index:40;max-width:calc(100vw - 32px)}.aa-toast.show{opacity:1;transform:translate(-50%,0)}
+      .aa-stale{border:1px solid #edcd85;background:#fff8e8;color:#765009;border-radius:10px;padding:12px 14px;margin:12px 0;line-height:1.5}.aa-prompt-box{margin-top:14px;border:1px solid #9ca3af;background:#f7f7f8}.aa-prompt-box textarea[readonly]{background:#fff;min-height:190px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.55}.aa-hypothesis{background:#f8f8f9;border:1px solid var(--line);border-radius:11px;padding:14px;margin-top:14px}.aa-hypothesis textarea{min-height:110px}.aa-comparison{display:grid;grid-template-columns:1fr 1fr;gap:11px}.aa-comparison .aa-card:last-child{grid-column:1/-1}.aa-empty{color:var(--muted);text-align:center;padding:30px}.aa-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,15px);opacity:0;pointer-events:none;background:#20242b;color:#fff;padding:10px 14px;border-radius:9px;font-size:13px;transition:.18s;z-index:40;max-width:calc(100vw - 32px)}.aa-toast.show{opacity:1;transform:translate(-50%,0)}
       @media(max-width:760px){.aa-comparison{grid-template-columns:1fr}.aa-comparison .aa-card:last-child{grid-column:auto}}
     `;
     document.head.append(style);
@@ -276,8 +276,8 @@ ${author.hypothesis}
       <div class='panel-title'><div><span class='eyebrow'>4단계 · 메인 분석</span><h2>작성자가 실제로 무엇을 했는지 벗겨냅니다</h2><p>팩트 판정은 그대로 둡니다. 어려운 오류명을 나열하는 대신, 원문과 검증 결과를 근거로 작성자가 실제로 한 일을 평범한 말로 보여줍니다.</p></div><div id='aaProgress' class='progress-pill'>독립 분석 전</div></div>
       <div class='aa-intro'><strong>분석은 기계적으로, 행동은 누구나 알아볼 말로</strong><p>전문용어는 보조로만 남깁니다. 메인 판정은 “비교를 흉내 냈다”, “증명 책임을 떠넘겼다”, “반박하면 나쁜 사람이 되게 만들었다”처럼 실제 행동으로 씁니다.</p></div>
       <div id='aaStale' class='aa-stale hidden'>팩트 검증 결과가 독립 분석 이후 바뀌었습니다. 기존 해부는 보존되어 있으며, 현재 자료로 다시 실행할 수 있습니다.</div>
-      <section class='aa-stage dark-edge'><div class='aa-head'><div><span class='aa-number'>1</span><h3>독립 해부</h3><p>사용자 의견 없이 원문과 팩트 결과만 보냅니다. 가장 중요한 행동 세 개를 평범한 말로 뽑고 책임을 판정합니다.</p></div><span id='aaIndependentStatus' class='aa-status'>미실행</span></div><div class='row-actions'><button id='aaSendIndependent' class='button aa-dark' type='button'>독립 해부를 AI에 맡기기</button><button id='aaClearIndependent' class='button quiet' type='button'>독립 결과만 지우기</button></div><div class='return-box'><textarea id='aaIndependentAnswer' rows='12' placeholder='AI의 JSON 답변 전체를 붙여넣으세요'></textarea><div class='row-actions'><button id='aaApplyIndependent' class='button aa-dark' type='button'>독립 해부 반영</button><span id='aaIndependentHint' class='hint'></span></div></div><div id='aaIndependentResult' class='aa-result aa-empty'>아직 독립 해부 결과가 없습니다.</div></section>
-      <section class='aa-stage'><div class='aa-head'><div><span class='aa-number'>2</span><h3>내 해석과 대조</h3><p>독립 결과가 나온 뒤에만 내 가설을 공개합니다. AI가 맞는 부분과 과장을 따로 판정합니다.</p></div><span id='aaComparisonStatus' class='aa-status'>미실행</span></div><div class='aa-hypothesis'><label class='field'><span>내가 보는 이 사람의 핵심</span><textarea id='aaHypothesis' placeholder='예: 보고 싶은 사실만 모은 뒤, 자료의 양을 자기 결론의 정확성으로 착각하는 사람 같다.'></textarea></label><div class='row-actions'><button id='aaSendComparison' class='button primary' type='button'>내 해석과 대조 맡기기</button><button id='aaClearComparison' class='button quiet' type='button'>대조 결과만 지우기</button></div></div><div class='return-box'><textarea id='aaComparisonAnswer' rows='10' placeholder='AI의 JSON 답변 전체를 붙여넣으세요'></textarea><div class='row-actions'><button id='aaApplyComparison' class='button primary' type='button'>대조 결과 반영</button><span id='aaComparisonHint' class='hint'></span></div></div><div id='aaComparisonResult' class='aa-result aa-empty'>아직 가설 대조 결과가 없습니다.</div></section>
+      <section class='aa-stage dark-edge'><div class='aa-head'><div><span class='aa-number'>1</span><h3>독립 해부</h3><p>사용자 의견 없이 원문과 팩트 결과만 보냅니다. 가장 중요한 행동 세 개를 평범한 말로 뽑고 책임을 판정합니다.</p></div><span id='aaIndependentStatus' class='aa-status'>미실행</span></div><div class='row-actions'><button id='aaSendIndependent' class='button aa-dark' type='button'>독립 해부 작업문 만들기</button><button id='aaClearIndependent' class='button quiet' type='button'>독립 결과만 지우기</button></div><div id='aaIndependentPromptBox' class='return-box aa-prompt-box hidden'><label class='field'><span>1. 아래 작업문을 복사하세요</span><textarea id='aaIndependentPrompt' rows='10' readonly placeholder='위 버튼을 누르면 작업문이 여기에 나타납니다.'></textarea></label><div class='row-actions'><button id='aaCopyIndependentPrompt' class='button aa-dark' type='button'>작업문 복사</button><button id='aaOpenIndependentChat' class='button quiet' type='button'>2. ChatGPT 열기</button><span class='hint'>ChatGPT에서 붙여넣고 전송한 뒤, 답변 JSON을 아래 칸에 붙여넣으세요.</span></div></div><div class='return-box'><textarea id='aaIndependentAnswer' rows='12' placeholder='3. ChatGPT의 JSON 답변 전체를 여기에 붙여넣으세요'></textarea><div class='row-actions'><button id='aaApplyIndependent' class='button aa-dark' type='button'>독립 해부 반영</button><span id='aaIndependentHint' class='hint'></span></div></div><div id='aaIndependentResult' class='aa-result aa-empty'>아직 독립 해부 결과가 없습니다.</div></section>
+      <section class='aa-stage'><div class='aa-head'><div><span class='aa-number'>2</span><h3>내 해석과 대조</h3><p>독립 결과가 나온 뒤에만 내 가설을 공개합니다. AI가 맞는 부분과 과장을 따로 판정합니다.</p></div><span id='aaComparisonStatus' class='aa-status'>미실행</span></div><div class='aa-hypothesis'><label class='field'><span>내가 보는 이 사람의 핵심</span><textarea id='aaHypothesis' placeholder='예: 보고 싶은 사실만 모은 뒤, 자료의 양을 자기 결론의 정확성으로 착각하는 사람 같다.'></textarea></label><div class='row-actions'><button id='aaSendComparison' class='button primary' type='button'>대조 작업문 만들기</button><button id='aaClearComparison' class='button quiet' type='button'>대조 결과만 지우기</button></div></div><div id='aaComparisonPromptBox' class='return-box aa-prompt-box hidden'><label class='field'><span>1. 아래 대조 작업문을 복사하세요</span><textarea id='aaComparisonPrompt' rows='10' readonly placeholder='위 버튼을 누르면 작업문이 여기에 나타납니다.'></textarea></label><div class='row-actions'><button id='aaCopyComparisonPrompt' class='button primary' type='button'>작업문 복사</button><button id='aaOpenComparisonChat' class='button quiet' type='button'>2. ChatGPT 열기</button><span class='hint'>ChatGPT에서 붙여넣고 전송한 뒤, 답변 JSON을 아래 칸에 붙여넣으세요.</span></div></div><div class='return-box'><textarea id='aaComparisonAnswer' rows='10' placeholder='3. ChatGPT의 JSON 답변 전체를 여기에 붙여넣으세요'></textarea><div class='row-actions'><button id='aaApplyComparison' class='button primary' type='button'>대조 결과 반영</button><span id='aaComparisonHint' class='hint'></span></div></div><div id='aaComparisonResult' class='aa-result aa-empty'>아직 가설 대조 결과가 없습니다.</div></section>
       <section class='data-export'><div class='data-export-head'><div><h3>해부 결과 내보내기</h3><p>근거판과 냉정한 최종 해부를 함께 저장합니다.</p></div></div><div class='row-actions'><button id='aaCopy' class='button aa-dark' type='button'>해부 결과 복사</button><button id='aaDownloadMd' class='button quiet' type='button'>Markdown 저장</button><button id='aaDownloadJson' class='button quiet' type='button'>JSON 저장</button></div></section>
     `;
     $('main').append(panel);
@@ -364,16 +364,23 @@ ${author.hypothesis}
     $('#aaHypothesis').addEventListener('input', e => { author.hypothesis = e.target.value; saveAuthor().catch(() => {}); });
     $('#aaComparisonAnswer').addEventListener('input', e => { author.comparisonAnswer = e.target.value; });
     $('#aaSendIndependent').onclick = async () => {
-      const chatWindow = window.open('about:blank', '_blank');
       await loadProject();
-      if (!project.sourceText?.trim()) { chatWindow?.close(); return toast('원문이 없습니다.'); }
-      if (!arr(project.claims).length) { chatWindow?.close(); return toast('먼저 팩트 검증 결과를 반영하세요.'); }
+      if (!project.sourceText?.trim()) return toast('원문이 없습니다.');
+      if (!arr(project.claims).length) return toast('먼저 팩트 검증 결과를 반영하세요.');
       const prompt = independentPrompt(project);
-      copy(prompt);
-      if (chatWindow) chatWindow.location.href = 'https://chatgpt.com/';
-      else toast('팝업이 차단됐습니다. 작업문은 복사됐으니 ChatGPT를 직접 열어 붙여넣으세요.');
-      if (chatWindow) toast('작업문을 복사했습니다. 새 채팅에서 붙여넣고 전송하세요.');
+      $('#aaIndependentPrompt').value = prompt;
+      $('#aaIndependentPromptBox').classList.remove('hidden');
+      $('#aaIndependentPrompt').focus();
+      $('#aaIndependentPrompt').select();
+      toast('작업문을 만들었습니다. 아래에서 복사한 뒤 ChatGPT에 붙여넣으세요.');
     };
+    $('#aaCopyIndependentPrompt').onclick = () => {
+      const prompt = $('#aaIndependentPrompt').value;
+      if (!prompt) return toast('먼저 독립 해부 작업문을 만드세요.');
+      copy(prompt);
+      toast('작업문을 복사했습니다.');
+    };
+    $('#aaOpenIndependentChat').onclick = () => window.open('https://chatgpt.com/', '_blank', 'noopener');
     $('#aaApplyIndependent').onclick = async () => {
       const hint = $('#aaIndependentHint');
       try {
@@ -396,17 +403,24 @@ ${author.hypothesis}
       await saveAuthor(); render(); toast('독립 해부 결과를 지웠습니다.');
     };
     $('#aaSendComparison').onclick = async () => {
-      const chatWindow = window.open('about:blank', '_blank');
       author.hypothesis = $('#aaHypothesis').value.trim();
-      if (!author.independent) { chatWindow?.close(); return toast('먼저 독립 해부를 반영하세요.'); }
-      if (!author.hypothesis) { chatWindow?.close(); return toast('내 해석을 먼저 입력하세요.'); }
+      if (!author.independent) return toast('먼저 독립 해부를 반영하세요.');
+      if (!author.hypothesis) return toast('내 해석을 먼저 입력하세요.');
       await saveAuthor();
       const prompt = comparisonPrompt(project);
-      copy(prompt);
-      if (chatWindow) chatWindow.location.href = 'https://chatgpt.com/';
-      else toast('팝업이 차단됐습니다. 작업문은 복사됐으니 ChatGPT를 직접 열어 붙여넣으세요.');
-      if (chatWindow) toast('작업문을 복사했습니다. 새 채팅에서 붙여넣고 전송하세요.');
+      $('#aaComparisonPrompt').value = prompt;
+      $('#aaComparisonPromptBox').classList.remove('hidden');
+      $('#aaComparisonPrompt').focus();
+      $('#aaComparisonPrompt').select();
+      toast('대조 작업문을 만들었습니다. 아래에서 복사하세요.');
     };
+    $('#aaCopyComparisonPrompt').onclick = () => {
+      const prompt = $('#aaComparisonPrompt').value;
+      if (!prompt) return toast('먼저 대조 작업문을 만드세요.');
+      copy(prompt);
+      toast('대조 작업문을 복사했습니다.');
+    };
+    $('#aaOpenComparisonChat').onclick = () => window.open('https://chatgpt.com/', '_blank', 'noopener');
     $('#aaApplyComparison').onclick = async () => {
       const hint = $('#aaComparisonHint');
       try {
