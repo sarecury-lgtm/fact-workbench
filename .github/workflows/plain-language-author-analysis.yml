@@ -3,7 +3,7 @@ name: Sharpen author analysis language
 on:
   push:
     paths:
-      - 'scripts/update-author-analysis.py'
+      - 'scripts/update-author-analysis-trigger.txt'
 
 permissions:
   contents: write
